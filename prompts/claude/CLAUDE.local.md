@@ -152,16 +152,47 @@
    - `get-library-docs` - 获取最新官方文档
 
 需要先安装Context7 MCP，安装后此部分可以从引导词中删除：
+使用Claude Code:
 ```bash
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
+```
+
+使用Cursor或者其他ai编程工具 :
+```bash
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ],
+      "env": {
+        "DEFAULT_MINIMUM_TOKENS": "10000"
+      }
+    }
+  }
+}
 ```
 
 2. **搜索真实代码**
    - `searchGitHub` - 搜索 GitHub 上的实际使用案例
 
 需要先安装Grep MCP，安装后此部分可以从引导词中删除：
+使用Claude Code:
 ```bash
 claude mcp add --transport http grep https://mcp.grep.app
+```
+
+使用Cursor或者其他ai编程工具 :
+```bash
+{
+  "mcpServers": {
+    "grep": {
+      "url": "https://mcp.grep.app"
+    }
+  }
+}
 ```
 
 ### 编写规范文档工具
@@ -174,6 +205,22 @@ claude mcp add --transport http grep https://mcp.grep.app
 路径：`/docs/specs/*`
 
 需要先安装spec workflow MCP，安装后此部分可以从引导词中删除：
+使用Claude Code:
 ```bash
 claude mcp add spec-workflow-mcp -s user -- npx -y spec-workflow-mcp@latest
+```
+
+使用Cursor或者其他ai编程工具 :
+```bash
+{
+  "mcpServers": {
+    "spec-workflow": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@pimzino/spec-workflow-mcp@latest"
+      ]
+    }
+  }
+}
 ```
