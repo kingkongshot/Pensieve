@@ -22,6 +22,8 @@ prompts/
 ├── kiro/                # Kiro 工作流
 │   ├── spec.md          # 英文规范
 │   └── spec_zh.md       # 中文规范
+├── othaiides/           # 其他AI IDE相关
+│   └── OthAiIdes.local.md  # 其他AI IDE本地开发规范
 └── visualization/       # 可视化工具
     └── obsidian-canvas/ # Obsidian Canvas图表
 ```
@@ -29,7 +31,7 @@ prompts/
 ## 🌟 精选推荐
 
 ### 开发规范
-- [Claude本地开发规范](./prompts/claude/CLAUDE.local.md) - Linus Torvalds风格的基础引导词
+- [Claude本地开发规范](./prompts/claude/CLAUDE.local.md) [其他AI IDE本地开发规范](./prompts/othaiides/OthAiIdes.local.md) - Linus Torvalds风格的基础引导词
 - [Kiro工作流](./prompts/kiro/spec_zh.md) - 结构化的需求→设计→实施流程
 
 ### Claude Code Agent 配置
