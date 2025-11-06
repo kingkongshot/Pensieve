@@ -2,6 +2,12 @@
 
 一个精心组织的引导词集合，帮助提升AI协作效率和质量。
 
+## 📢 更新日志
+
+### 2025-11-06
+- ✨ 新增基于用户自身 MBTI 人格缺陷的 Linus Torvalds 风格引导词
+- 🎨 提高了模型输出的可读性。
+
 ## 📋 快速导航
 
 ### 🛠️ 开发工具类
@@ -15,8 +21,9 @@
 
 ```
 prompts/
+├── Agents/              # Agent 引导词配置
+│   └── AGENTS.md        # Linus Torvalds 风格的基础引导词
 ├── claude/              # Claude AI 相关
-│   ├── CLAUDE.local.md  # 本地开发规范
 │   ├── agents/          # Agent 配置
 │   └── commands/        # 自定义命令
 ├── kiro/                # Kiro 工作流
@@ -29,7 +36,7 @@ prompts/
 ## 🌟 精选推荐
 
 ### 开发规范
-- [Claude本地开发规范](./prompts/claude/CLAUDE.local.md) - Linus Torvalds风格的基础引导词
+- [Linus Torvalds 风格引导词](./Agents/AGENTS.md) - Linus Torvalds 风格的基础引导词
 - [Kiro工作流](./prompts/kiro/spec_zh.md) - 结构化的需求→设计→实施流程
 
 ### Claude Code Agent 配置
@@ -52,7 +59,7 @@ prompts/
 
 欢迎加入微信群一起vibe coding：
 
-<img src="./QRCode.png" alt="微信交流群二维码" width="200">
+<img src="./QRCode.svg" alt="微信交流群二维码" width="200">
 
 ## 📄 许可证
 
