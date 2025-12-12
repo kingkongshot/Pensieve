@@ -1,5 +1,8 @@
 # 引导词仓库 (Prompts Collection)
 
+[![Run in Smithery](https://smithery.ai/badge/skills/kingkongshot)](https://smithery.ai/skills?ns=kingkongshot&utm_source=github&utm_medium=badge)
+
+
 一个精心组织的引导词集合，帮助提升AI协作效率和质量。
 
 ## 📢 更新日志
