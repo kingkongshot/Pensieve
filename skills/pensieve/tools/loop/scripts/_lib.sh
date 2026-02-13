@@ -75,6 +75,107 @@ python_bin() {
     command -v python3 || command -v python
 }
 
+runtime_now_utc() {
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+runtime_log() {
+    local level="$1"
+    local code="$2"
+    local message="$3"
+    shift 3 || true
+
+    local ts
+    ts="$(runtime_now_utc)"
+    printf '[pensieve-runtime] ts=%s level=%s code=%s message=%s' "$ts" "$level" "$code" "$message" >&2
+
+    local kv
+    for kv in "$@"; do
+        printf ' %s' "$kv" >&2
+    done
+    printf '\n' >&2
+}
+
+# Run a command with a timeout and bounded retries.
+# Usage:
+#   run_with_retry_timeout "<label>" <timeout_sec> <retries> -- <cmd> [args...]
+# Return codes:
+#   0 success
+#   124 timeout
+#   other non-zero command exit code
+#   2 invalid runtime usage
+run_with_retry_timeout() {
+    local label="$1"
+    local timeout_sec="$2"
+    local retries="$3"
+    shift 3
+
+    if ! [[ "$timeout_sec" =~ ^[0-9]+$ ]]; then
+        runtime_log "error" "RUNTIME_USAGE" "timeout_sec must be a non-negative integer" "label=$label" "timeout_sec=$timeout_sec"
+        return 2
+    fi
+    if ! [[ "$retries" =~ ^[0-9]+$ ]]; then
+        runtime_log "error" "RUNTIME_USAGE" "retries must be a non-negative integer" "label=$label" "retries=$retries"
+        return 2
+    fi
+    if [[ "${1:-}" != "--" ]]; then
+        runtime_log "error" "RUNTIME_USAGE" "missing -- separator before command" "label=$label"
+        return 2
+    fi
+    shift
+    if [[ $# -eq 0 ]]; then
+        runtime_log "error" "RUNTIME_USAGE" "missing command" "label=$label"
+        return 2
+    fi
+
+    local py
+    py="$(python_bin || true)"
+    if [[ -z "$py" && "$timeout_sec" -gt 0 ]]; then
+        runtime_log "warn" "RUNTIME_NO_TIMEOUT" "python not available; running without timeout" "label=$label"
+    fi
+
+    local attempt=1
+    local rc
+    while true; do
+        if [[ -n "$py" && "$timeout_sec" -gt 0 ]]; then
+            "$py" - "$timeout_sec" "$@" <<'PY'
+import subprocess
+import sys
+
+timeout = float(sys.argv[1])
+cmd = sys.argv[2:]
+try:
+    completed = subprocess.run(cmd, timeout=timeout)
+    sys.exit(completed.returncode)
+except subprocess.TimeoutExpired:
+    sys.exit(124)
+PY
+            rc=$?
+        else
+            "$@"
+            rc=$?
+        fi
+
+        if [[ "$rc" -eq 0 ]]; then
+            return 0
+        fi
+
+        if [[ "$rc" -eq 124 ]]; then
+            runtime_log "warn" "RUNTIME_TIMEOUT" "command timed out" "label=$label" "attempt=$attempt" "timeout_sec=$timeout_sec"
+        else
+            runtime_log "warn" "RUNTIME_RETRY" "command failed" "label=$label" "attempt=$attempt" "exit=$rc"
+        fi
+
+        if (( attempt > retries )); then
+            runtime_log "error" "RUNTIME_FAILED" "command exhausted retries" "label=$label" "attempts=$attempt" "exit=$rc"
+            return "$rc"
+        fi
+
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+}
+
 json_get_value() {
     local file="$1"
     local key="$2"
