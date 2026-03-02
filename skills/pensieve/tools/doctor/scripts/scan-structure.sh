@@ -219,7 +219,9 @@ def normalize_context_link_line(line: str) -> str:
 
 def normalize_critical_file_content(path: Path, text: str) -> str:
     rel = path.as_posix()
-    if rel.endswith("pipelines/run-when-reviewing-code.md") or rel.endswith("pipelines/run-when-committing.md"):
+    basename = Path(rel).name
+    if basename in ("run-when-reviewing-code.md", "pipeline.run-when-reviewing-code.md",
+                     "run-when-committing.md", "pipeline.run-when-committing.md"):
         lines = [normalize_context_link_line(line) for line in text.split("\n")]
         return "\n".join(lines).rstrip() + "\n"
     return text
