@@ -307,7 +307,7 @@ for p in files:
                     "SHOULD_FIX",
                     "FM-401",
                     rel,
-                    "decision should contain an `## Exploration Reduction` section",
+                    "decision 建议包含 `## 探索减负` / `## Exploration Reduction` 段",
                 )
             )
         else:
@@ -317,7 +317,7 @@ for p in files:
                         "SHOULD_FIX",
                         "FM-402",
                         rel,
-                        "Exploration Reduction section missing 'What to ask less' entry",
+                        "探索减负 段缺少“下次可以少问什么 / What to ask less”条目",
                     )
                 )
             if "下次可以少查什么" not in body and "What to look up less" not in body:
@@ -326,7 +326,7 @@ for p in files:
                         "SHOULD_FIX",
                         "FM-403",
                         rel,
-                        "Exploration Reduction section missing 'What to look up less' entry",
+                        "探索减负 段缺少“下次可以少查什么 / What to look up less”条目",
                     )
                 )
             if "失效条件" not in body and "Invalidation condition" not in body:
@@ -335,7 +335,7 @@ for p in files:
                         "SHOULD_FIX",
                         "FM-404",
                         rel,
-                        "Exploration Reduction section missing 'Invalidation conditions' entry",
+                        "探索减负 段缺少“失效条件 / Invalidation conditions”条目",
                     )
                 )
 
