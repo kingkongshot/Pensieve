@@ -30,7 +30,7 @@ Determine the semantic layer first, then decide which type to write:
 
 The same insight can be split and written into multiple layers. `pipeline` only expresses HOW (execution order and verification loops) and does not replace IS/WANT/MUST.
 
-### Pipeline Gate
+### Pipeline Creation Criteria
 - Same task type has recurred across multiple sessions/loops
 - Execution order significantly affects outcome (steps cannot be arbitrarily swapped)
 - Each step has a verifiable completion criterion
@@ -72,7 +72,7 @@ When a problem requires "exploring the codebase to answer" and the content belon
 **Actions**:
 1. Read session context and `git diff --cached`
 2. Extract core insights (can be multiple); determine semantic layer (IS/WANT/MUST); split into multiple writes when multi-layer
-3. Determine whether `pipeline` (HOW) is needed: only create when gate criteria are met
+3. Determine whether `pipeline` (HOW) is needed: only create when creation criteria are met
 4. Path rules:
    - `maxim`: `.claude/skills/pensieve/maxims/{one-sentence-conclusion}.md`
    - `decision`: `.claude/skills/pensieve/decisions/{date}-{conclusion}.md`

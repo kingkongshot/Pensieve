@@ -25,7 +25,7 @@ Automatically extract insights from session context + diff before committing, ca
 
 ---
 
-## Signal Gate
+## Signal Quality Rules
 
 The value of capture lies in reuse next time; evidence-free guesses would mislead future decisions.
 
@@ -37,7 +37,7 @@ The value of capture lies in reuse next time; evidence-free guesses would mislea
 
 ## Task Blueprint (Create tasks in order)
 
-### Task 1: Quality Gate -- Determine Whether Capturable Insights Exist
+### Task 1: Determine Whether to Capture -- Check if Capturable Insights Exist
 
 **Goal**: Quickly determine if this commit has experience worth capturing; if not, skip directly to Task 3
 
@@ -78,7 +78,7 @@ The value of capture lies in reuse next time; evidence-free guesses would mislea
 5. Type-specific requirements:
    - `decision`: include "exploration reduction triad" (what to skip asking / what to skip searching / invalidation conditions)
    - Exploration-type `knowledge`: include (state transitions / symptom->root cause->locating / boundaries and ownership / anti-patterns / verification signals)
-   - `pipeline`: must meet gate criteria (recurrence + non-swappable order + verifiable)
+   - `pipeline`: must meet creation criteria (recurrence + non-swappable order + verifiable)
 6. Write to target path; add related links
 7. Run project-level SKILL maintenance:
    ```

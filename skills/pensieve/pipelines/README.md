@@ -93,7 +93,7 @@ First ask: can we solve this by composing existing pipelines?
 | Only missing a validation step | Add to an existing pipeline |
 | Entirely different execution loop | Create a new pipeline |
 
-Before adding, pass one more gate:
+Before adding, pass one more check:
 
 - The same task structure has appeared multiple times
 - Step ordering cannot be swapped
@@ -180,7 +180,7 @@ tags: [pensieve, pipeline]
 description: [Constrained scenario + cost of skipping + trigger words]. Example: this pipeline must be run in X scenario; skipping causes Y risk. Trigger words: a, b, c.
 ---
 
-## Signal Gate (Mandatory)
+## Signal Quality Rules (Mandatory)
 
 - Only output high-signal results (reproducible, locatable, evidence-backed)
 - Candidate issues must be validated before entering final output
@@ -260,7 +260,7 @@ description: [Constrained scenario + cost of skipping + trigger words]. Example:
 | Filename | Must be `run-when-*.md`; trigger scenario discernible from filename |
 | Required frontmatter | `id/type/title/status/created/updated/tags/description` |
 | `description` | In frontmatter; includes trigger words |
-| Signal gate | Must declare high-signal threshold and "do not report" items |
+| Signal quality rules | Must declare high-signal threshold and "do not report" items |
 | No knowledge dump | Long background goes to Knowledge/Maxims/Decisions/Skills |
 | Content split | If a paragraph does not affect task orchestration, it must be split out and referenced via `[[...]]` |
 | Task Blueprint | Must have explicit `Task 1/2/3...` in order |

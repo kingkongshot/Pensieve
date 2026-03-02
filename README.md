@@ -88,7 +88,7 @@ Read-only scan of all user data: frontmatter format, semantic link integrity, di
 
 ### `upgrade` — Version Upgrade and Migration
 
-Highest priority. Syncs the latest plugin version, checks five dimensions for alignment (paths, directories, config, pipeline references, key file contents) — if any are misaligned, runs a full migration. Automatically runs doctor after migration for verification.
+Highest priority. Runs scripted version comparison and pull, and cleans up legacy version residue (old plugin keys / old plugin names / old directories). After upgrade completes, guides you to manually run doctor for verification.
 
 > "Upgrade pensieve"
 
@@ -142,7 +142,7 @@ Reusing native capabilities means: no extra wrappers, and when Claude Code upgra
 - **System capabilities separated from user data** — plugin updates never overwrite your accumulated project knowledge
 - **Confirm before executing** — when scope is unclear, confirm first; never auto-start
 - **Read before write** — read format specs before creating any user data
-- **Confidence gating** — pipeline outputs require ≥80% confidence to report; no guesswork in output
+- **Confidence requirements** — pipeline outputs require ≥80% confidence to report; no guesswork in output
 
 ### Directory Structure
 

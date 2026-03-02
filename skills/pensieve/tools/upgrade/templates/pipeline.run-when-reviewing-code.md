@@ -26,7 +26,7 @@ This pipeline only handles task orchestration. Review standards and deeper ratio
 
 ---
 
-## Signal Gate
+## Signal Quality Rules
 
 The value of a review report depends on its signal-to-noise ratio -- too many low-signal issues drown out what truly matters.
 

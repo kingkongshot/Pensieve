@@ -43,6 +43,8 @@ Check scope: project-level user data (latest per `migrations/README.md`) and leg
 
 **Status determination** (hard rule): `MUST_FIX > 0` -> `FAIL` (-> `upgrade`) | `MUST_FIX = 0` and `SHOULD_FIX + INFO > 0` -> `PASS_WITH_WARNINGS` (-> `self-improve`) | all zero -> `PASS` (-> `none`)
 
+**Execution principle (simplified)**: Prefer running `run-doctor.sh` and use its summary/report as the sole basis for judgment; do not add manual inference.
+
 ---
 ## Phase 1: Read specs and generate check matrix
 **Goal**: Extract all check items from spec files and build an internal check matrix.
@@ -54,6 +56,11 @@ Check scope: project-level user data (latest per `migrations/README.md`) and leg
 ## Phase 2: Scan files and validate
 **Goal**: Run shared structure scan and incorporate results into the judgment.
 **Actions**:
+0. Prefer the all-in-one script (recommended):
+```bash
+bash <SYSTEM_SKILL_ROOT>/tools/doctor/scripts/run-doctor.sh --strict
+```
+> This script serially executes structure scan, frontmatter check, graph generation, report summary, and SKILL/MEMORY maintenance. If using this script, skip manual steps 1-3 below.
 1. Run:
 ```bash
 bash <SYSTEM_SKILL_ROOT>/tools/doctor/scripts/scan-structure.sh --output .state/pensieve-structure-scan.json
@@ -66,7 +73,7 @@ bash <SYSTEM_SKILL_ROOT>/tools/doctor/scripts/scan-structure.sh --output .state/
 **Actions**:
 1. Run:
 ```bash
-bash <SYSTEM_SKILL_ROOT>/tools/doctor/scripts/check-frontmatter.sh
+bash <SYSTEM_SKILL_ROOT>/tools/doctor/scripts/check-frontmatter.sh --format text
 ```
 2. Read files scanned, MUST_FIX/SHOULD_FIX counts and details
 3. Frontmatter syntax errors/missing/required field missing/invalid values -> `MUST_FIX`; pipeline naming violations (`FM-301/FM-302`) -> `MUST_FIX`; `decision` exploration shortcut missing (`FM-401~FM-404`) -> `SHOULD_FIX`

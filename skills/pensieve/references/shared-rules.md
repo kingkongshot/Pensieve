@@ -4,14 +4,14 @@ Cross-cutting hard rules for all tools. Each tool file references this document 
 
 ## Version Update Priority (Hard Rule)
 
-Version update pre-check is owned by `upgrade` and serves as the highest-priority gate.
+Version update pre-check is owned by `upgrade` and serves as the highest-priority prerequisite.
 
 - When "update version / plugin issue / version uncertainty / compatibility problem" is mentioned, route to `upgrade` for version confirmation first.
 - Before running `init` or `doctor`, if version status is unknown, complete `upgrade` version check first.
 - After `init` completes, a `doctor` run is mandatory.
 - When `upgrade` finds the version is already current, it does not enter migration; it only asks the user whether to continue with a `doctor` self-check.
 - Default flow: `upgrade` (version check) → (optional) `doctor` → `self-improve`.
-- `doctor` is not a prerequisite gate for `upgrade`.
+- `doctor` is not a prerequisite for `upgrade`.
 
 ## Confirm Before Executing (Hard Rule)
 
@@ -19,7 +19,7 @@ When the user has not explicitly issued a tool command, confirm with a one-line 
 
 - Loop Phase 2 context summary must receive user confirmation before entering Phase 3.
 - Self-Improve may write directly when explicitly triggered or pipeline-triggered, without additional confirmation.
-- Write operations follow each tool file's own rules; no additional global "draft-then-write" gate is imposed.
+- Write operations follow each tool file's own rules; no additional global "draft-then-write" restriction is imposed.
 
 ## Semantic Link Rules (Hard Rule)
 
@@ -59,7 +59,7 @@ Constraints:
 - Items not explicitly marked `must / required / hard rule / at least one` in the spec must not be flagged as MUST_FIX.
 - Limited inference from the spec is allowed but must be labeled as "inferred item".
 
-## Confidence Gate (Pipeline Output Quality)
+## Confidence Requirements (Pipeline Output Quality)
 
 Each candidate issue in pipeline output must be tagged with a confidence score (0-100):
 

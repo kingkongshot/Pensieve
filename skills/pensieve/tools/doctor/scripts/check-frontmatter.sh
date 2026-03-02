@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../loop/scripts/_lib.sh"
 
 ROOT=""
+FORMAT="text"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --root)
@@ -15,14 +16,20 @@ while [[ $# -gt 0 ]]; do
       ROOT="$2"
       shift 2
       ;;
+    --format)
+      [[ $# -ge 2 ]] || { echo "Missing value for --format" >&2; exit 1; }
+      FORMAT="$2"
+      shift 2
+      ;;
     -h|--help)
       cat <<'USAGE'
 Usage:
-  check-frontmatter.sh [--root <path>]
+  check-frontmatter.sh [--root <path>] [--format <text|json>]
 
 Options:
-  --root <path>   Scan root. Default: <project>/.claude/skills/pensieve
-  -h, --help      Show help
+  --root <path>      Scan root. Default: <project>/.claude/skills/pensieve
+  --format <fmt>     Output format: text | json. Default: text
+  -h, --help         Show help
 USAGE
       exit 0
       ;;
@@ -33,6 +40,15 @@ USAGE
   esac
 done
 
+case "$FORMAT" in
+  text|json)
+    ;;
+  *)
+    echo "Unsupported --format: $FORMAT (expected: text|json)" >&2
+    exit 1
+    ;;
+esac
+
 if [[ -z "$ROOT" ]]; then
   ROOT="$(user_data_root)"
 fi
@@ -41,16 +57,18 @@ ROOT="$(to_posix_path "$ROOT")"
 PYTHON_BIN="$(python_bin || true)"
 [[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
 
-"$PYTHON_BIN" - "$ROOT" <<'PY'
+"$PYTHON_BIN" - "$ROOT" "$FORMAT" <<'PY'
 from __future__ import annotations
 
 import datetime as dt
+import json
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 root = Path(sys.argv[1])
+fmt = sys.argv[2]
 
 allowed_types = {"maxim", "decision", "knowledge", "pipeline"}
 allowed_status = {"draft", "active", "archived"}
@@ -218,7 +236,7 @@ issues: list[Issue] = []
 files = list_markdown_files(root)
 
 if not root.exists():
-    issues.append(Issue("MUST_FIX", "FM-000", str(root), "User data root directory does not exist"))
+    issues.append(Issue("MUST_FIX", "FM-000", str(root), "用户数据根目录不存在"))
 
 for p in files:
     rel = str(p.relative_to(root))
@@ -230,7 +248,7 @@ for p in files:
                     "MUST_FIX",
                     "FM-301",
                     rel,
-                    "Legacy pipeline filename `review.md` is deprecated; rename to `run-when-*.md` (recommended: `run-when-reviewing-code.md`)",
+                    "legacy pipeline 文件名 `review.md` 已废弃，必须改为 `run-when-*.md`（推荐 `run-when-reviewing-code.md`）",
                 )
             )
         elif not pipeline_name_re.match(p.name):
@@ -239,7 +257,7 @@ for p in files:
                     "MUST_FIX",
                     "FM-302",
                     rel,
-                    "Pipeline filename must match `run-when-*.md` so invocation intent is clear from the name",
+                    "pipeline 文件名必须为 `run-when-*.md`，从文件名可直接判断触发场景",
                 )
             )
 
@@ -248,102 +266,123 @@ for p in files:
 
     if fm is None:
         if fm_state == "unclosed":
-            issues.append(Issue("MUST_FIX", "FM-101", rel, "frontmatter starts but is not closed (missing ending ---)"))
+            issues.append(Issue("MUST_FIX", "FM-101", rel, "frontmatter 起始存在但未闭合（缺少结束 ---）"))
         else:
-            issues.append(Issue("MUST_FIX", "FM-102", rel, "missing frontmatter (required unified top-level metadata)"))
+            issues.append(Issue("MUST_FIX", "FM-102", rel, "缺少 frontmatter（必须添加统一顶部元数据）"))
         continue
 
     for err in parse_errors:
-        issues.append(Issue("MUST_FIX", "FM-103", rel, f"frontmatter syntax error: {err}"))
+        issues.append(Issue("MUST_FIX", "FM-103", rel, f"frontmatter 语法错误: {err}"))
 
     missing = [k for k in required_keys if k not in fm]
     if missing:
-        issues.append(Issue("MUST_FIX", "FM-104", rel, f"missing required fields: {', '.join(missing)}"))
+        issues.append(Issue("MUST_FIX", "FM-104", rel, f"缺少必填字段: {', '.join(missing)}"))
 
     v_type = fm.get("type")
     if isinstance(v_type, str) and v_type and v_type not in allowed_types:
-        issues.append(Issue("MUST_FIX", "FM-201", rel, f"invalid type: {v_type} (allowed: {', '.join(sorted(allowed_types))})"))
+        issues.append(Issue("MUST_FIX", "FM-201", rel, f"type 非法: {v_type}（允许: {', '.join(sorted(allowed_types))}）"))
 
     v_status = fm.get("status")
     if isinstance(v_status, str) and v_status and v_status not in allowed_status:
-        issues.append(Issue("MUST_FIX", "FM-202", rel, f"invalid status: {v_status} (allowed: {', '.join(sorted(allowed_status))})"))
+        issues.append(Issue("MUST_FIX", "FM-202", rel, f"status 非法: {v_status}（允许: {', '.join(sorted(allowed_status))}）"))
 
     v_id = fm.get("id")
     if isinstance(v_id, str) and v_id and not id_re.match(v_id):
-        issues.append(Issue("MUST_FIX", "FM-203", rel, "invalid id (allow only lowercase letters/digits/hyphen; cannot start with hyphen)"))
+        issues.append(Issue("MUST_FIX", "FM-203", rel, "id 非法（仅允许小写字母/数字/中划线，且不能以中划线开头）"))
 
     for key in ["created", "updated"]:
         v = fm.get(key)
         if isinstance(v, str) and v and not valid_date(v):
-            issues.append(Issue("MUST_FIX", "FM-204", rel, f"{key} is invalid (must be YYYY-MM-DD)"))
+            issues.append(Issue("MUST_FIX", "FM-204", rel, f"{key} 非法（应为 YYYY-MM-DD）"))
 
     v_tags = fm.get("tags")
     if v_tags is not None and not isinstance(v_tags, list):
-        issues.append(Issue("MUST_FIX", "FM-205", rel, "invalid tags (must be an array, e.g. [pensieve, maxim])"))
+        issues.append(Issue("MUST_FIX", "FM-205", rel, "tags 非法（应为数组，如 [pensieve, maxim]）"))
 
     if rel.startswith("decisions/"):
         body = body_without_frontmatter(text)
-        if not re.search(r"^\s*##\s*Exploration Shortcut\s*$", body, flags=re.MULTILINE):
+        if not re.search(r"^\s*##\s*探索减负\s*$", body, flags=re.MULTILINE):
             issues.append(
                 Issue(
                     "SHOULD_FIX",
                     "FM-401",
                     rel,
-                    "decision should include an `## Exploration Shortcut` section to clarify how to reduce inquiry and exploration cost next time",
+                    "decision 建议包含 `## 探索减负` 段，明确下次如何减少询问与探索成本",
                 )
             )
         else:
-            if "What to ask less next time" not in body:
+            if "下次可以少问什么" not in body:
                 issues.append(
                     Issue(
                         "SHOULD_FIX",
                         "FM-402",
                         rel,
-                        "decision `Exploration Shortcut` section is missing a 'What to ask less next time' entry",
+                        "decision 的 `探索减负` 段缺少“下次可以少问什么”条目",
                     )
                 )
-            if "What to look up less next time" not in body:
+            if "下次可以少查什么" not in body:
                 issues.append(
                     Issue(
                         "SHOULD_FIX",
                         "FM-403",
                         rel,
-                        "decision `Exploration Shortcut` section is missing a 'What to look up less next time' entry",
+                        "decision 的 `探索减负` 段缺少“下次可以少查什么”条目",
                     )
                 )
-            if "Invalidation conditions" not in body:
+            if "失效条件" not in body:
                 issues.append(
                     Issue(
                         "SHOULD_FIX",
                         "FM-404",
                         rel,
-                        "decision `Exploration Shortcut` section is missing an 'Invalidation conditions (when to re-evaluate)' entry",
+                        "decision 的 `探索减负` 段缺少“失效条件（何时必须重新评估）”条目",
                     )
                 )
 
 must_fix = [x for x in issues if x.level == "MUST_FIX"]
 should_fix = [x for x in issues if x.level == "SHOULD_FIX"]
 
-print("# Frontmatter Quick Check Report")
-print()
-print(f"- Root: `{root}`")
-print(f"- Files scanned: {len(files)}")
-print(f"- MUST_FIX: {len(must_fix)}")
-print(f"- SHOULD_FIX: {len(should_fix)}")
-print()
-
-print("## MUST_FIX")
-if not must_fix:
-    print("- (none)")
+if fmt == "json":
+    out = {
+        "root": str(root),
+        "files_scanned": len(files),
+        "summary": {
+            "must_fix_count": len(must_fix),
+            "should_fix_count": len(should_fix),
+            "total_issues": len(issues),
+        },
+        "issues": [
+            {
+                "level": i.level,
+                "code": i.code,
+                "path": i.path,
+                "message": i.message,
+            }
+            for i in issues
+        ],
+    }
+    print(json.dumps(out, ensure_ascii=False, indent=2))
 else:
-    for i in must_fix:
-        print(f"- [{i.code}] `{i.path}`: {i.message}")
-print()
+    print("# Frontmatter 快检报告")
+    print()
+    print(f"- Root: `{root}`")
+    print(f"- Files scanned: {len(files)}")
+    print(f"- MUST_FIX: {len(must_fix)}")
+    print(f"- SHOULD_FIX: {len(should_fix)}")
+    print()
 
-print("## SHOULD_FIX")
-if not should_fix:
-    print("- (none)")
-else:
-    for i in should_fix:
-        print(f"- [{i.code}] `{i.path}`: {i.message}")
+    print("## MUST_FIX")
+    if not must_fix:
+        print("- (none)")
+    else:
+        for i in must_fix:
+            print(f"- [{i.code}] `{i.path}`: {i.message}")
+    print()
+
+    print("## SHOULD_FIX")
+    if not should_fix:
+        print("- (none)")
+    else:
+        for i in should_fix:
+            print(f"- [{i.code}] `{i.path}`: {i.message}")
 PY
