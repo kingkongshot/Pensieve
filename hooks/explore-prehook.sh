@@ -5,36 +5,13 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../skills/pensieve/tools/loop/scripts/_lib.sh"
+
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
 [[ -n "$PYTHON_BIN" ]] || exit 0
 
-to_posix_path() {
-    local raw_path="$1"
-    [[ -n "$raw_path" ]] || {
-        echo ""
-        return 0
-    }
-
-    if [[ "$raw_path" =~ ^[A-Za-z]:[\\/].* ]]; then
-        if command -v cygpath >/dev/null 2>&1; then
-            cygpath -u "$raw_path"
-            return 0
-        fi
-
-        local drive rest drive_lower
-        drive="${raw_path:0:1}"
-        rest="${raw_path:2}"
-        rest="${rest//\\//}"
-        drive_lower="$(printf '%s' "$drive" | tr 'A-Z' 'a-z')"
-        echo "/$drive_lower$rest"
-        return 0
-    fi
-
-    echo "$raw_path"
-}
-
-PROJECT_ROOT_RAW="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
-PROJECT_ROOT="$(to_posix_path "$PROJECT_ROOT_RAW")"
+PROJECT_ROOT="$(to_posix_path "$(project_root)")"
 SKILL_FILE="$PROJECT_ROOT/.claude/skills/pensieve/SKILL.md"
 
 [[ -f "$SKILL_FILE" ]] || exit 0

@@ -1,6 +1,6 @@
 # 用户数据结构迁移规范
 
-Doctor / Upgrade 共用的结构历史、目标结构与处理规则（单一事实源）。结构检查统一由脚本 `<SYSTEM_SKILL_ROOT>/tools/doctor/scripts/scan-structure.sh` 承载。
+Doctor / Migrate 共用的结构历史、目标结构与处理规则（单一事实源）。结构检查统一由脚本 `<SYSTEM_SKILL_ROOT>/tools/doctor/scripts/scan-structure.sh` 承载。
 
 ## 当前目标结构（Latest, Active）
 
@@ -13,7 +13,7 @@ Doctor / Upgrade 共用的结构历史、目标结构与处理规则（单一事
 - `pipelines/`
 - `loop/`
 
-关键文件（初始化后应存在，且 Upgrade 需对齐主体内容）：
+关键文件（初始化后应存在，且 Migrate 需对齐主体内容）：
 - `pipelines/run-when-reviewing-code.md`
 - `pipelines/run-when-committing.md`
 - `knowledge/taste-review/content.md`
@@ -38,7 +38,7 @@ Doctor / Upgrade 共用的结构历史、目标结构与处理规则（单一事
 | `<project>/.claude/skills/pensieve/{maxims,decisions,knowledge,pipelines,loop}/{README*.md,readme*.md}` | deprecated | 删除（规范单一事实源在插件侧 `<SYSTEM_SKILL_ROOT>/*/README.md`） |
 | `<project>/.claude/skills/pensieve/` | active | 作为唯一读写根目录 |
 
-## 迁移判定（给 Doctor/Upgrade）
+## 迁移判定（给 Doctor/Migrate）
 
 判为"存在结构迁移问题"的条件：
 1. 发现 deprecated 路径与 active 路径并行存在（双源）。
@@ -57,7 +57,7 @@ Doctor / Upgrade 共用的结构历史、目标结构与处理规则（单一事
 
 ## 关键文件内容对齐策略
 
-当关键文件缺失或主体内容不一致时，Upgrade 必须执行完整对齐：
+当关键文件缺失或主体内容不一致时，Migrate 必须执行完整对齐：
 1. 若目标文件存在，先备份为 `*.bak.<timestamp>`。
 2. 使用模板文件覆盖目标文件。
 3. 在迁移报告中列出被替换文件与备份路径。
@@ -78,5 +78,5 @@ Doctor / Upgrade 共用的结构历史、目标结构与处理规则（单一事
 
 ## 维护规则
 
-1. 目录结构发生变化时，先更新本文件，再更新 Doctor/Upgrade 文档。
-2. 若 Doctor/Upgrade 与本文件冲突，以本文件为准。
+1. 目录结构发生变化时，先更新本文件，再更新 Doctor/Migrate 文档。
+2. 若 Doctor/Migrate 与本文件冲突，以本文件为准。

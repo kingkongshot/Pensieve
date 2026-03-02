@@ -43,10 +43,10 @@ claude plugin install pensieve@kingkongshot-marketplace --scope project
 先探索项目，再决定是否使用 Pensieve 工具。
 
 当用户需要结构化工作流时：
-- Upgrade 仅用于版本更新/旧数据迁移/残留清理（按需）
+- Upgrade 仅用于版本更新与插件键对齐（按需）
+- Migrate 仅用于旧数据迁移与残留清理（按需）
 - 使用 Init 工具初始化项目级用户数据，并生成首轮探索与品味基线（新项目首次接入）
 - 使用 Loop 工具进行拆解 + 自动循环执行
-- 使用 Upgrade 工具处理迁移用户数据
 - 查看图谱时直接读取项目级 `SKILL.md` 的 `## Graph`
 
 当用户要求改进 Pensieve（pipelines/scripts/rules/behavior）时，
@@ -86,7 +86,7 @@ mkdir -p .claude/skills/pensieve/{maxims,decisions,knowledge,pipelines,loop}
 
 ## 历史迁移
 
-如果你之前把系统内容复制到了项目里（例如 `skills/pensieve/`），请使用 Upgrade 工具做迁移和清理：
+如果你之前把系统内容复制到了项目里（例如 `skills/pensieve/`），请使用 Migrate 工具做迁移和清理：
 
 - 合并项目级 maxims
 - 对齐关键模块与文件位置（含 `run-when-*.md`、`knowledge/taste-review/content.md`）
@@ -113,7 +113,8 @@ claude plugin install pensieve@kingkongshot-marketplace --scope user
 3. 基于提交记录与代码做一次探索，并用 review pipeline 产出首轮品味分析
 4. 重启 Claude Code（不要跳过）
 5. **告诉用户只需表达几个基础意图**：
-   - 升级或迁移（Upgrade）
+   - 升级版本（Upgrade）
+   - 迁移结构（Migrate）
    - 初始化（Init）
    - 拆解执行（Loop）
    - 体检（Doctor，初始化后必跑；升级后必跑）

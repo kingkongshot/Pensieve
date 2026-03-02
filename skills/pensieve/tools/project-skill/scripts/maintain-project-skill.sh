@@ -2,7 +2,7 @@
 # Maintain project-level Pensieve SKILL.md and Claude auto memory guidance block.
 #
 # Usage:
-#   maintain-project-skill.sh --event <install|upgrade|doctor|self-improve|sync> [--note "..."]
+#   maintain-project-skill.sh --event <install|upgrade|migrate|doctor|self-improve|sync> [--note "..."]
 
 set -euo pipefail
 
@@ -27,7 +27,7 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       cat <<'USAGE'
 Usage:
-  maintain-project-skill.sh --event <install|upgrade|doctor|self-improve|sync> [--note "..."]
+  maintain-project-skill.sh --event <install|upgrade|migrate|doctor|self-improve|sync> [--note "..."]
 
 Options:
   --event <name>   Lifecycle event to record
@@ -49,7 +49,7 @@ if [[ -z "$EVENT" ]]; then
 fi
 
 case "$EVENT" in
-  install|init|upgrade|doctor|self-improve|selfimprove|sync|auto-sync)
+  install|init|upgrade|migrate|doctor|self-improve|selfimprove|sync|auto-sync)
     ;;
   *)
     echo "Unsupported --event: $EVENT" >&2
@@ -119,6 +119,8 @@ def event_display_name(raw: str) -> str:
         return "install/init"
     if r == "upgrade":
         return "upgrade"
+    if r == "migrate":
+        return "migrate"
     if r == "doctor":
         return "doctor"
     if r in {"sync", "auto-sync"}:
@@ -129,6 +131,7 @@ def event_display_name(raw: str) -> str:
 TOOLS = [
     ("init", "Init"),
     ("upgrade", "Upgrade"),
+    ("migrate", "Migrate"),
     ("doctor", "Doctor"),
     ("self-improve", "Self-Improve"),
     ("loop", "Loop"),

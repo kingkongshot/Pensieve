@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "required_dirs": ["maxims", "decisions", "knowledge", "pipelines", "loop"],
+  "critical_files": [
+    {
+      "target": "pipelines/run-when-reviewing-code.md",
+      "template": "tools/upgrade/templates/pipeline.run-when-reviewing-code.md",
+      "compare_mode": "pipeline_context_links_ignored"
+    },
+    {
+      "target": "pipelines/run-when-committing.md",
+      "template": "tools/upgrade/templates/pipeline.run-when-committing.md",
+      "compare_mode": "pipeline_context_links_ignored"
+    },
+    {
+      "target": "knowledge/taste-review/content.md",
+      "template": "knowledge/taste-review/content.md",
+      "compare_mode": "exact"
+    }
+  ],
+  "legacy_paths": {
+    "project": ["skills/pensieve", ".claude/pensieve"],
+    "user": [".claude/skills/pensieve", ".claude/pensieve"]
+  },
+  "legacy_graph_patterns": ["_pensieve-graph*.md", "pensieve-graph*.md", "graph*.md"],
+  "legacy_readme_regex": "(?i)^readme(?:.*\\.md)?$",
+  "plugin_keys": {
+    "current": "pensieve@kingkongshot-marketplace",
+    "legacy": ["pensieve@Pensieve", "pensieve@pensieve-claude-plugin"]
+  },
+  "memory": {
+    "start_marker": "<!-- pensieve:auto-memory:start -->",
+    "end_marker": "<!-- pensieve:auto-memory:end -->",
+    "guidance_line": "- 引导：当需求涉及项目知识沉淀、结构体检、版本迁移或复杂任务拆解时，优先调用 `pensieve` skill。"
+  },
+  "doctor": {
+    "next_step": {
+      "migrate_categories": [
+        "missing_root",
+        "missing_directory",
+        "deprecated_path",
+        "legacy_graph_file",
+        "legacy_spec_readme_copy",
+        "missing_critical_file",
+        "critical_file_drift",
+        "review_pipeline_path_drift"
+      ],
+      "upgrade_categories": [
+        "legacy_enabled_plugins_key",
+        "missing_enabled_plugins_key"
+      ]
+    }
+  },
+  "findings": {
+    "STR-001": {
+      "message": "项目级用户数据根目录不存在。",
+      "recommendation": "先执行 init 或 migrate 补齐 .claude/skills/pensieve 基础结构。"
+    },
+    "STR-002": {
+      "message": "缺少关键目录: {dir}/",
+      "recommendation": "执行 migrate 补齐目录结构，并复跑 doctor。"
+    },
+    "STR-101": {
+      "message": "发现 deprecated 旧路径与 active 根目录并存。",
+      "recommendation": "执行 migrate 迁移并删除旧路径，收敛到 .claude/skills/pensieve 单根目录。"
+    },
+    "STR-111": {
+      "message": "发现独立 graph 遗留文件。",
+      "recommendation": "执行 migrate 删除独立 graph 文件，图谱仅保留在 SKILL.md#Graph。"
+    },
+    "STR-121": {
+      "message": "发现项目级子目录中的历史规范 README 副本。",
+      "recommendation": "执行 migrate 删除该副本；规范以插件侧 <SYSTEM_SKILL_ROOT>/*/README.md 为准。"
+    },
+    "STR-201": {
+      "message": "缺少关键种子文件。",
+      "recommendation": "执行 migrate 进行关键文件强对齐。"
+    },
+    "STR-202": {
+      "message": "关键文件主体内容与模板不一致（上下文链接值差异已忽略）。",
+      "recommendation": "执行 migrate 先备份再替换，恢复关键流程文件主体与模板一致。"
+    },
+    "STR-301": {
+      "message": "review pipeline 仍引用插件内 Knowledge 路径。",
+      "recommendation": "执行 migrate 将引用切换为项目级 .claude/skills/pensieve/knowledge/... 路径。"
+    },
+    "STR-401": {
+      "message": "settings.json 解析失败，无法完整验证 enabledPlugins: {err}",
+      "recommendation": "修复 settings.json 语法后重试。"
+    },
+    "STR-402": {
+      "message": "enabledPlugins 中仍启用旧插件键。",
+      "recommendation": "执行 upgrade 清理旧键，仅保留 pensieve@kingkongshot-marketplace。"
+    },
+    "STR-403": {
+      "message": "enabledPlugins 缺少新插件键或未启用。",
+      "recommendation": "执行 upgrade 写入 pensieve@kingkongshot-marketplace: true。"
+    },
+    "STR-501": {
+      "message": "缺少 Claude Code auto memory 入口 MEMORY.md。",
+      "recommendation": "执行 init/migrate/doctor 触发 auto memory 补齐，或在 ~/.claude/projects/<project>/memory/MEMORY.md 写入 Pensieve 引导块。"
+    },
+    "STR-502": {
+      "message": "MEMORY.md 缺少 Pensieve 说明，或内容未与系统 skill 的 description 对齐。",
+      "recommendation": "执行 init/migrate/doctor 触发 auto memory 对齐，确保 ~/.claude/projects/<project>/memory/MEMORY.md 与 skill description 一致并包含 pensieve skill 引导。"
+    },
+    "STR-901": {
+      "message": "扫描所需模板缺失，无法完成校验：{detail}",
+      "recommendation": "修复插件安装或更新到完整版本后重试。"
+    }
+  }
+}

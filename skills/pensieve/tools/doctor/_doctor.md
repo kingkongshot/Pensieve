@@ -18,7 +18,7 @@ description: 只读检查工具：基于 README 规范输出 PASS/PASS_WITH_WARN
 从规范推导检查项而非硬编码。
 
 ---
-规范来源（通用约束见 `shared-rules.md` § 规范来源）：`<SYSTEM_SKILL_ROOT>/maxims/README.md`、`decisions/README.md`、`pipelines/README.md`、`knowledge/README.md`、`tools/doctor/migrations/README.md`、`tools/upgrade/_upgrade.md`（仅升级流程）。
+规范来源（通用约束见 `shared-rules.md` § 规范来源）：`<SYSTEM_SKILL_ROOT>/maxims/README.md`、`decisions/README.md`、`pipelines/README.md`、`knowledge/README.md`、`tools/doctor/migrations/README.md`、`tools/upgrade/_upgrade.md`（仅版本流程）、`tools/migrate/_migrate.md`（仅迁移流程）。
 
 检查范围：项目级用户数据（以 `migrations/README.md` Latest 为准）及旧路径候选（deprecated 列表）。插件配置：`~/.claude/settings.json`、`<project>/.claude/settings.json`。
 
@@ -41,7 +41,7 @@ description: 只读检查工具：基于 README 规范输出 PASS/PASS_WITH_WARN
 
 **INFO**：观察项、统计项、或需用户决策的取舍项。
 
-**结论状态判定**（硬规则）：`MUST_FIX > 0` → `FAIL`（迁移类问题→`upgrade`；非迁移类问题→`self-improve`）| `MUST_FIX = 0` 且 `SHOULD_FIX + INFO > 0` → `PASS_WITH_WARNINGS`（→ `self-improve`）| 三者均 0 → `PASS`（→ `none`）
+**结论状态判定**（硬规则）：`MUST_FIX > 0` → `FAIL`（结构迁移类问题→`migrate`；插件键类问题→`upgrade`；其余→`self-improve`）| `MUST_FIX = 0` 且 `SHOULD_FIX + INFO > 0` → `PASS_WITH_WARNINGS`（→ `self-improve`）| 三者均 0 → `PASS`（→ `none`）
 
 **执行原则（简化）**：优先执行 `run-doctor.sh`，并以脚本产出的 summary/report 为唯一判定依据，不做人工二次推断。
 
@@ -66,7 +66,7 @@ bash <SYSTEM_SKILL_ROOT>/tools/doctor/scripts/run-doctor.sh --strict
 bash <SYSTEM_SKILL_ROOT>/tools/doctor/scripts/scan-structure.sh --output .state/pensieve-structure-scan.json
 ```
 2. 读取 `status`、`summary.must_fix_count`/`should_fix_count`、`flags.*`、`findings[]`
-3. 若 `must_fix_count > 0`，结论至少 `FAIL`；仅迁移类问题建议动作为 `upgrade`
+3. 若 `must_fix_count > 0`，结论至少 `FAIL`；结构迁移类建议动作为 `migrate`，插件键类建议动作为 `upgrade`
 
 ## Phase 2.2: Frontmatter 快检
 **Goal**: 覆盖 frontmatter 格式验证，纳入判定。
@@ -106,7 +106,7 @@ bash <SYSTEM_SKILL_ROOT>/tools/upgrade/scripts/generate-user-data-graph.sh
 - MUST_FIX: {n}
 - SHOULD_FIX: {n}
 - INFO: {n}
-- 建议下一步: {`upgrade` | `self-improve` | `none`}
+- 建议下一步: {`migrate` | `upgrade` | `self-improve` | `none`}
 
 ## 1.5) 图谱摘要（结论前置依据）
 - 图谱文件: `{<project>/.claude/skills/pensieve/SKILL.md#Graph}`
@@ -132,7 +132,7 @@ bash <SYSTEM_SKILL_ROOT>/tools/upgrade/scripts/generate-user-data-graph.sh
 - 发现独立 graph 文件: {yes/no}
 - 缺失关键目录: {yes/no}
 - MEMORY.md 缺失/漂移: {yes/no}
-- 建议动作: {`upgrade` | `self-improve` | `none`}
+- 建议动作: {`migrate` | `upgrade` | `self-improve` | `none`}
 
 ## 5) 三步行动计划
 1. {第一步（可执行的具体操作）}
@@ -152,7 +152,7 @@ bash <SYSTEM_SKILL_ROOT>/tools/upgrade/scripts/generate-user-data-graph.sh
 |---|---|---|---|
 ```
 
-2. `FAIL` 且迁移相关时 `下一步` 优先 `upgrade`；`decision`/`pipeline` 断链至少 `MUST_FIX`
+2. `FAIL` 且结构迁移相关时 `下一步` 优先 `migrate`；插件键相关时优先 `upgrade`；`decision`/`pipeline` 断链至少 `MUST_FIX`
 3. Doctor 不改用户数据文件；仅允许自动维护 `SKILL.md` 与 auto memory
 
 ## Phase 3.5: 维护项目级 SKILL + MEMORY

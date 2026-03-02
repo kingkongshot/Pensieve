@@ -32,7 +32,7 @@ bash <SYSTEM_SKILL_ROOT>/tools/loop/scripts/init-project-data.sh
 ```
 3. 核验最小结果：`{maxims,decisions,knowledge,pipelines,loop}` 目录已存在；`pipelines/run-when-reviewing-code.md`、`pipelines/run-when-committing.md`、`knowledge/taste-review/content.md` 已存在。
 4. 核验项目级 SKILL：`.claude/skills/pensieve/SKILL.md` 包含自动生成标记与 graph 段落；`~/.claude/projects/<project>/memory/MEMORY.md` 包含 Pensieve 引导块。
-5. 若扫描到历史目录（`skills/pensieve/` 或 `.claude/pensieve/`），提醒运行 `upgrade`。
+5. 若扫描到历史目录（`skills/pensieve/` 或 `.claude/pensieve/`），提醒运行 `migrate`。
 
 ## Phase 2: 基线探索
 
@@ -56,6 +56,6 @@ bash <SYSTEM_SKILL_ROOT>/tools/loop/scripts/init-project-data.sh
 ## 约束
 
 - 初始化可附带只读探索与代码审查，但不直接写入沉淀内容，由 `self-improve` 负责。
-- 不做迁移清理，由 `upgrade` 负责。
+- 不做迁移清理，由 `migrate` 负责。
 - 不覆盖已有用户文件。
 - 不输出 `doctor` 风格的合规分级结论。

@@ -57,7 +57,7 @@ claude plugin install pensieve@kingkongshot-marketplace --scope user
 
 [安装指南](docs/installation.md) · [更新指南](docs/update.md) · [卸载](docs/installation.md#卸载)
 
-## 内置五个工具
+## 内置六个工具
 
 安装即可用，不需要额外配置。说人话就能触发。
 
@@ -86,11 +86,17 @@ claude plugin install pensieve@kingkongshot-marketplace --scope user
 
 > "检查一下数据有没有问题"
 
-### `upgrade` — 版本升级与迁移
+### `upgrade` — 版本升级
 
-最高优先级。脚本化执行版本比对与拉取，并清理旧版本残留（旧插件键/旧插件名/旧目录）。升级完成后引导你手动跑 doctor 复检。
+只做版本层动作：版本比对、拉取最新、插件键对齐与旧插件名清理。不做目录迁移和内容修复。升级完成后引导你手动跑 doctor 复检。
 
 > "升级 pensieve"
+
+### `migrate` — 结构迁移与残留清理
+
+只做用户数据结构动作：旧目录迁移、关键种子文件对齐、旧 graph/README 残留清理。不做版本更新，不输出 PASS/FAIL。完成后引导手动跑 doctor 复检。
+
+> "迁移 pensieve 历史数据"
 
 ## 四层知识模型
 
@@ -140,6 +146,7 @@ Pensieve 把项目知识分成四层，每层解决不同的问题：
 ### 设计原则
 
 - **系统能力与用户数据分离** — 插件更新不覆盖你积累的项目知识
+- **规则单一事实源** — 目录/关键文件/旧路径/插件键统一由 `tools/core/schema.json` 定义
 - **确认再执行** — 范围不明确时先确认，不自动开跑
 - **先读后写** — 创建任何用户数据前先读格式规范
 - **置信度要求** — pipeline 输出 ≥80% 置信度才报告，不输出猜测

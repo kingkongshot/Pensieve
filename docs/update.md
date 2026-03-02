@@ -58,35 +58,41 @@ bash <SYSTEM_SKILL_ROOT>/tools/upgrade/scripts/run-upgrade.sh
 bash <SYSTEM_SKILL_ROOT>/tools/doctor/scripts/run-doctor.sh --strict
 ```
 
-`run-upgrade.sh` 会自动执行：版本对比 → 拉取最新 → 清理旧版本残留（不做 doctor）。
+`run-upgrade.sh` 会自动执行：版本对比 → 拉取最新 → 插件键与旧插件名清理（不做 doctor，不做结构迁移）。
 
 **Upgrade 核心逻辑（脚本化简版）**：
 - 只做版本相关动作：比对升级前后版本 + 拉取最新版本
-- 只做旧版本清理：旧插件键、旧插件名、旧目录与历史残留文件
+- 只做插件配置清理：旧插件键、旧插件名
 - 不做升级前结构检查，也不在 Upgrade 阶段运行 Doctor
 - 升级完成后，由用户手动运行 Doctor 做体检
+- 结构迁移（旧目录/关键文件/历史残留）单独通过 `run-migrate.sh` 处理
 
 然后：
-- 仅在需要版本迁移/残留清理时执行 Upgrade（不要把 Upgrade 当成体检步骤）
+- 仅在需要版本更新时执行 Upgrade（不要把 Upgrade 当成体检或迁移步骤）
 - 升级完成后手动执行一次 Doctor
 - 如果 doctor 报告迁移/结构问题，再按报告继续处理
 - 如果 doctor 通过，按需执行 Self-Improve 沉淀经验
-- Upgrade、Doctor、Self-Improve 执行后都应维护：
+- Doctor、Self-Improve（以及执行迁移后的流程）应维护：
   - 项目级 `.claude/skills/pensieve/SKILL.md`（固定路由 + graph）
   - Claude auto memory `~/.claude/projects/<project>/memory/MEMORY.md` 的 Pensieve 引导块（描述与系统 skill `description` 对齐）
 
 推荐顺序：
-1. 运行 Upgrade（版本对比 + 拉取 + 清理）
+1. 运行 Upgrade（版本对比 + 拉取 + 插件配置清理）
 2. 若升级了版本，重启 Claude Code
 3. 运行一次 Doctor（必须，手动触发）
-4. 若 doctor 报错，按报告修复后再跑 Doctor
-5. 需要沉淀经验时再运行 Self-Improve
+4. 若 doctor 报告迁移类问题，运行：
+```bash
+bash <SYSTEM_SKILL_ROOT>/tools/migrate/scripts/run-migrate.sh
+```
+5. 迁移后再跑一次 Doctor，确认 MUST_FIX 清零
+6. 需要沉淀经验时再运行 Self-Improve
 
 如果你在指导用户，提醒他们只需表达这几个意图：
 - loop 执行
 - doctor 体检
 - self-improve 沉淀
-- upgrade 迁移
+- upgrade 升级版本
+- migrate 结构迁移
 - 看图谱（直接读项目级 `SKILL.md` 的 `## Graph`）
 
 ---
