@@ -301,41 +301,41 @@ for p in files:
 
     if rel.startswith("decisions/"):
         body = body_without_frontmatter(text)
-        if not re.search(r"^\s*##\s*探索减负\s*$", body, flags=re.MULTILINE):
+        if not re.search(r"^\s*##\s*(?:探索减负|Exploration Reduction)\s*$", body, flags=re.MULTILINE):
             issues.append(
                 Issue(
                     "SHOULD_FIX",
                     "FM-401",
                     rel,
-                    "decision 建议包含 `## 探索减负` 段，明确下次如何减少询问与探索成本",
+                    "decision should contain an `## Exploration Reduction` section",
                 )
             )
         else:
-            if "下次可以少问什么" not in body:
+            if "下次可以少问什么" not in body and "What to ask less" not in body:
                 issues.append(
                     Issue(
                         "SHOULD_FIX",
                         "FM-402",
                         rel,
-                        "decision 的 `探索减负` 段缺少“下次可以少问什么”条目",
+                        "Exploration Reduction section missing 'What to ask less' entry",
                     )
                 )
-            if "下次可以少查什么" not in body:
+            if "下次可以少查什么" not in body and "What to look up less" not in body:
                 issues.append(
                     Issue(
                         "SHOULD_FIX",
                         "FM-403",
                         rel,
-                        "decision 的 `探索减负` 段缺少“下次可以少查什么”条目",
+                        "Exploration Reduction section missing 'What to look up less' entry",
                     )
                 )
-            if "失效条件" not in body:
+            if "失效条件" not in body and "Invalidation condition" not in body:
                 issues.append(
                     Issue(
                         "SHOULD_FIX",
                         "FM-404",
                         rel,
-                        "decision 的 `探索减负` 段缺少“失效条件（何时必须重新评估）”条目",
+                        "Exploration Reduction section missing 'Invalidation conditions' entry",
                     )
                 )
 
