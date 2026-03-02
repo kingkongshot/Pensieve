@@ -268,7 +268,7 @@ END {
 
     print "```"
     print ""
-    print "## 摘要"
+    print "### 摘要"
     print ""
     print "- 扫描笔记数: " node_count
     print "- 发现链接数: " edge_count
@@ -277,7 +277,7 @@ END {
 
     if (unresolved > 0) {
         print ""
-        print "## 未解析链接"
+        print "### 未解析链接"
         print ""
         for (i = 1; i <= unresolved; i++) {
             print "- `" unresolved_src[i] "` -> `[[" unresolved_tok[i] "]]`"
