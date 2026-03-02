@@ -155,7 +155,7 @@ status: active
 created: {created_date}
 tags: [pensieve, skill, project, auto-generated]
 name: pensieve-project-skill
-description: Project-level Pensieve skill file. Auto-maintained route + graph. Do not edit manually.
+description: Project knowledge base (auto-maintained). Knowledge contains previously explored file locations and module boundaries for direct reuse; decisions/maxims are settled decisions and principles to follow; pipelines are reusable workflows. Also includes routing table, knowledge graph, and project paths.
 ---
 
 # Pensieve Project Skill (Auto-Maintained)

@@ -1,6 +1,6 @@
 ---
 name: pensieve
-description: Project knowledge archival and workflow routing. Check existing knowledge before exploring the codebase to skip redundant locating; use self-improve to write findings after exploring. Provides init, upgrade, doctor, self-improve, and loop tools.
+description: Project knowledge base and workflow routing. Knowledge contains previously explored file locations, module boundaries, and call chains — reuse directly instead of re-locating; decisions/maxims are settled architectural decisions and coding principles — follow them, don't re-debate; pipelines are reusable workflows. Use self-improve to capture new findings after tasks. Provides init, upgrade, doctor, self-improve, and loop tools.
 ---
 
 # Pensieve

@@ -68,17 +68,23 @@ user_data_root() {
 #   ~/.claude/projects/<encoded-project-root>/memory
 auto_memory_project_key() {
     local pr
-    pr="$(to_posix_path "$(project_root)")"
+    # Use raw path — must NOT go through to_posix_path so that the
+    # generated key matches Claude Code's own project-key algorithm.
+    # Fixes: https://github.com/kingkongshot/Pensieve/issues/16
+    if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+        pr="$CLAUDE_PROJECT_DIR"
+    else
+        pr="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+    fi
     [[ -n "$pr" ]] || {
         echo ""
         return 0
     }
 
     local encoded
-    encoded="${pr//\//-}"
-    if [[ "$encoded" != -* ]]; then
-        encoded="-$encoded"
-    fi
+    # Match Claude Code's project key encoding:
+    # Replace : / \ _ with -
+    encoded="${pr//[:\/\\_]/-}"
     echo "$encoded"
 }
 
