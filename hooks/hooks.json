@@ -22,9 +22,9 @@
         ]
       }
     ],
-    "SubagentStart": [
+    "PreToolUse": [
       {
-        "matcher": "Explore",
+        "matcher": "Agent",
         "hooks": [
           {
             "type": "command",
