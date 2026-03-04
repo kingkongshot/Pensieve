@@ -25,6 +25,6 @@ tags: [pensieve, maxim]
 - Explicitly approved behavior changes are allowed when documented and reviewed.
 
 ## 上下文链接（recommended）
-- 基于：[[eliminate-special-cases-by-redesigning-data-flow]]
-- 导致：[[prefer-pragmatic-solutions-over-theoretical-completeness]]
-- 相关：[[knowledge/taste-review/content]]
+- 基于：[[knowledge/taste-review/content]]
+- 相关：[[maxims/eliminate-special-cases-by-redesigning-data-flow]]
+- 相关：[[maxims/prefer-pragmatic-solutions-over-theoretical-completeness]]

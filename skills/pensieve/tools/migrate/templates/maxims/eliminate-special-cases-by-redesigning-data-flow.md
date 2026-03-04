@@ -26,5 +26,5 @@ tags: [pensieve, maxim]
 
 ## 上下文链接（recommended）
 - 基于：[[knowledge/taste-review/content]]
-- 导致：[[preserve-user-visible-behavior-as-a-hard-rule]]
-- 相关：[[reduce-complexity-before-adding-branches]]
+- 相关：[[maxims/preserve-user-visible-behavior-as-a-hard-rule]]
+- 相关：[[maxims/reduce-complexity-before-adding-branches]]
