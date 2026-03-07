@@ -34,13 +34,12 @@ claude plugin install pensieve@kingkongshot-marketplace --scope project
 git clone -b experimental https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
 ```
 
-> **已有用户数据？** 如果 `.claude/skills/pensieve/` 已存在（里面有 `decisions/`、`knowledge/` 等），**不要删除它**。先把数据挪到安全位置，clone 后再搬回来：
+> **已有用户数据？** 如果 `.claude/skills/pensieve/` 已存在（里面有 `decisions/`、`knowledge/` 等），**不要删除它**。clone 到临时位置，把系统文件搬进去即可：
 >
 > ```bash
-> mv .claude/skills/pensieve /tmp/pensieve-data
-> git clone -b experimental https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
-> cp -r /tmp/pensieve-data/{decisions,knowledge,maxims,pipelines,loop} .claude/skills/pensieve/ 2>/dev/null
-> rm -rf /tmp/pensieve-data
+> git clone -b experimental https://github.com/kingkongshot/Pensieve.git /tmp/pensieve-skill
+> cp -r /tmp/pensieve-skill/{.git,.gitignore,.src,agents,SKILL.md,LICENSE,README.md} .claude/skills/pensieve/
+> rm -rf /tmp/pensieve-skill
 > ```
 
 ### 3. 初始化
