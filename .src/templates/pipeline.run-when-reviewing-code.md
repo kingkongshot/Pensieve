@@ -1,157 +1,157 @@
 ---
 id: run-when-reviewing-code
 type: pipeline
-title: 代码审查 Pipeline
+title: Code Review Pipeline
 status: active
 created: 2026-02-11
 updated: 2026-02-28
 tags: [pensieve, pipeline, review]
 name: run-when-reviewing-code
-description: 代码审查阶段流程：先探索提交记录与代码热点，提取可沉淀候选，再按固定 Task Blueprint 产出高信号品味审查结论。触发词：review、代码审查、检查代码。
+description: Code review stage pipeline. First explore commit history and code hotspots, extract capture candidates, then produce high-signal taste review conclusions following the fixed Task Blueprint. Trigger words: review, code review, inspect code.
 
 stages: [tasks]
 gate: auto
 ---
 
-# 代码审查 Pipeline
+# Code Review Pipeline
 
-这个 pipeline 只负责任务编排。审查标准与深层依据统一放在 Knowledge 中，避免在本文件重复展开。
+This pipeline handles task orchestration only. Review standards and their underlying rationale are kept in Knowledge to avoid duplication in this file.
 
-**Knowledge 参考**：`knowledge/taste-review/content.md`
+**Knowledge reference**: `knowledge/taste-review/content.md`
 
-**上下文链接（至少一条）**：
-- 基于：[[knowledge/taste-review/content]]
-- 导致：none
-- 相关：none
-
----
-
-## 信号判断规则
-
-审查报告的价值取决于信噪比——低信号问题过多会让真正重要的问题被淹没。
-
-- 只报告高信号问题：可复现、可定位、会影响正确性/稳定性/用户可见行为。
-- 候选问题需经过验证后才进入最终报告，因为未验证的推测会浪费修复时间。
-- 默认置信度阈值：`>= 80` 才可进入最终报告。
-- 不报告纯风格建议、主观偏好、或依赖猜测的风险项。
+**Context Links (at least one)**:
+- Based on: [[knowledge/taste-review/content]]
+- Leads to: none
+- Related: none
 
 ---
 
-## Task Blueprint（按顺序创建任务）
+## Signal Judgment Rules
 
-### Task 1：基线探索（提交记录 + 实际代码）
+The value of a review report depends on its signal-to-noise ratio -- too many low-signal issues drown out the truly important ones.
 
-**目标**：先找出热点与可沉淀候选，避免盲审
+- Only report high-signal issues: reproducible, locatable, and affecting correctness/stability/user-visible behavior.
+- Candidate issues must be verified before entering the final report, because unverified speculation wastes fix time.
+- Default confidence threshold: `>= 80` to enter the final report.
+- Do not report pure style suggestions, subjective preferences, or risk items based on speculation.
 
-**读取输入**：
-1. `git log`（默认最近 30 条提交，可按用户范围覆盖）
-2. 实际代码（优先最近高频变更文件）
+---
+
+## Task Blueprint (create tasks in order)
+
+### Task 1: Baseline Exploration (commit history + actual code)
+
+**Goal**: Identify hotspots and capture candidates first to avoid blind review
+
+**Read inputs**:
+1. `git log` (default: last 30 commits, can be overridden by user-specified range)
+2. Actual code (prioritize recently and frequently changed files)
 3. `knowledge/taste-review/content.md`
 
-**执行步骤**：
-1. 汇总最近提交的高频文件/模块与主要改动类型
-2. 读取对应代码，识别复杂度热点与边界不清区域
-3. 输出两份清单：
-   - 待审文件清单（按优先级）
-   - 可沉淀候选清单（标注建议类型：`knowledge/decision/maxim/pipeline`，每条附证据）
+**Steps**:
+1. Summarize high-frequency files/modules and main change types from recent commits
+2. Read the corresponding code, identify complexity hotspots and areas with unclear boundaries
+3. Output two lists:
+   - Files to review (by priority)
+   - Capture candidates (annotated with suggested type: `knowledge/decision/maxim/pipeline`, each with evidence)
 
-**完成标准**：得到可执行待审范围 + 可沉淀候选清单（均有证据）
+**Completion criteria**: Actionable review scope + capture candidate list (both with evidence)
 
 ---
 
-### Task 2：准备审查上下文
+### Task 2: Prepare Review Context
 
-**目标**：明确审查边界，避免漏审
+**Goal**: Clarify review boundaries to avoid missed coverage
 
-**读取输入**：
-1. 用户指定的文件 / 提交 / PR 范围（若有）
-2. Task 1 输出的待审文件清单与候选信息
+**Read inputs**:
+1. User-specified files / commits / PR range (if any)
+2. Task 1 output: files to review list and candidate information
 3. `knowledge/taste-review/content.md`
 
-**执行步骤**：
-1. 合并用户范围与 Task 1 发现，确定最终审查范围
-2. 识别技术语言、业务约束与风险点
-3. 固化最终待审文件清单（按优先级）
+**Steps**:
+1. Merge user-specified range with Task 1 findings to determine the final review scope
+2. Identify technical language, business constraints, and risk points
+3. Finalize the files-to-review list (by priority)
 
-**完成标准**：范围清晰，且有最终待审文件列表
+**Completion criteria**: Scope is clear, with a finalized file list
 
 ---
 
-### Task 3：逐文件审查并记录证据
+### Task 3: Per-file Review with Evidence Recording
 
-**目标**：形成候选问题清单（含证据与置信度）
+**Goal**: Produce a candidate issue list (with evidence and confidence scores)
 
-**读取输入**：
-1. Task 2 产出的最终待审文件清单
+**Read inputs**:
+1. Task 2 output: finalized files-to-review list
 2. `knowledge/taste-review/content.md`
 
-**执行步骤**：
-1. 对每个文件执行审查清单（理论与依据见 Knowledge，不在此文件复制）
-2. 仅记录“可能真实”的候选问题，附置信度（0-100）
-3. 对每条候选问题标注精确代码位置与证据
-4. 记录用户可见行为变化风险（若有）
+**Steps**:
+1. Run the review checklist on each file (theory and rationale are in Knowledge, not duplicated here)
+2. Record only "possibly real" candidate issues, with confidence scores (0-100)
+3. Annotate each candidate issue with precise code location and evidence
+4. Record user-visible behavior change risks (if any)
 
-**完成标准**：得到候选问题清单（含置信度、证据、定位）
-
----
-
-### Task 4：验证候选问题并过滤误报
-
-**目标**：只保留高信号、可验证问题
-
-**读取输入**：
-1. Task 3 的候选问题清单
-2. 对应代码上下文与规则依据
-
-**执行步骤**：
-1. 逐条验证候选问题是否真实可复现
-2. 对每条问题更新最终置信度，并移除 `<80` 项
-3. 移除证据不足、范围不明确、或依赖猜测的问题
-4. 生成“已验证问题列表”
-
-**完成标准**：得到高信号问题列表（每条均可定位、可解释、置信度>=80）
+**Completion criteria**: Candidate issue list (with confidence, evidence, location)
 
 ---
 
-### Task 5：生成可执行审查报告
+### Task 4: Verify Candidate Issues and Filter False Positives
 
-**目标**：输出可直接执行的修复建议与优先级
+**Goal**: Retain only high-signal, verifiable issues
 
-**读取输入**：
-1. Task 4 的已验证问题列表
+**Read inputs**:
+1. Task 3 candidate issue list
+2. Corresponding code context and rule rationale
 
-**执行步骤**：
-1. 按严重级别汇总关键问题（CRITICAL -> WARNING）
-2. 为每条问题提供具体修复建议或重写方向
-3. 明确用户可见行为变化与回归风险
-4. 若无问题，明确输出“无高信号问题”
+**Steps**:
+1. Verify each candidate issue for real reproducibility
+2. Update final confidence for each issue and remove items `<80`
+3. Remove issues with insufficient evidence, unclear scope, or reliance on speculation
+4. Produce the "verified issue list"
 
-**完成标准**：报告只包含已验证问题，且修复顺序清晰
-
----
-
-### Task 6：沉淀可复用结论（可选）
-
-**目标**：把可复用结论沉淀到现有四类中
-
-**读取输入**：
-1. Task 5 的审查报告
-
-**执行步骤**：
-1. 若结论是项目选择，沉淀到 `decision`
-2. 若结论是通用外部方法，沉淀到 `knowledge`
-3. 在沉淀条目中补充 `基于/导致/相关`（至少一条，若是 decision）
-4. 若无可复用结论，明确记录“无新增沉淀”
-
-**完成标准**：沉淀结果明确（已写入或明确跳过）
+**Completion criteria**: High-signal issue list (each locatable, explainable, confidence >= 80)
 
 ---
 
-## 失败回退
+### Task 5: Generate Actionable Review Report
 
-每种异常场景都有对应处理方式，避免在信息不足时产出误导性结论。
+**Goal**: Output directly actionable fix suggestions with priorities
 
-1. 无法获取提交记录（非 Git 项目或无历史）：标记 `SKIPPED` 并继续 Task 2（仅基于现有代码审查）。
-2. 审查范围不明确：先返回缺失信息并停止，不进入 Task 3——范围不清时审查容易偏离重点。
-3. 无法验证候选问题：标记”无法验证”并过滤，不进入最终报告。
-4. 若全部候选被过滤：输出”无高信号问题”。为凑数量输出低质量建议会损害报告的可信度。
+**Read inputs**:
+1. Task 4 verified issue list
+
+**Steps**:
+1. Summarize key issues by severity (CRITICAL -> WARNING)
+2. Provide specific fix suggestions or rewrite direction for each issue
+3. Clarify user-visible behavior changes and regression risks
+4. If no issues found, explicitly output "no high-signal issues"
+
+**Completion criteria**: Report contains only verified issues with a clear fix order
+
+---
+
+### Task 6: Capture Reusable Conclusions (optional)
+
+**Goal**: Capture reusable conclusions into the existing four categories
+
+**Read inputs**:
+1. Task 5 review report
+
+**Steps**:
+1. If the conclusion is a project-specific choice, capture to `decision`
+2. If the conclusion is a general external method, capture to `knowledge`
+3. Add `Based on / Leads to / Related` links in the captured entry (at least one, if it is a decision)
+4. If no reusable conclusions exist, explicitly record "no new captures"
+
+**Completion criteria**: Capture result is clear (written or explicitly skipped)
+
+---
+
+## Failure Fallback
+
+Each exception scenario has a corresponding handling approach, preventing misleading conclusions when information is insufficient.
+
+1. Cannot obtain commit history (not a Git project or no history): Mark `SKIPPED` and continue to Task 2 (review based on existing code only).
+2. Review scope is unclear: Return missing information and stop; do not enter Task 3 -- reviewing with unclear scope tends to drift off focus.
+3. Cannot verify candidate issues: Mark "unverifiable" and filter out; do not include in the final report.
+4. If all candidates are filtered out: Output "no high-signal issues". Padding the report with low-quality suggestions damages report credibility.

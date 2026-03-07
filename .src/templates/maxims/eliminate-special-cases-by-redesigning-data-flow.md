@@ -24,7 +24,7 @@ tags: [pensieve, maxim]
 ## Boundaries
 - If removing a branch breaks user-visible behavior, treat it as a migration and review first.
 
-## 上下文链接（recommended）
-- 基于：[[knowledge/taste-review/content]]
-- 相关：[[maxims/preserve-user-visible-behavior-as-a-hard-rule]]
-- 相关：[[maxims/reduce-complexity-before-adding-branches]]
+## Context Links (recommended)
+- Based on: [[knowledge/taste-review/content]]
+- Related: [[maxims/preserve-user-visible-behavior-as-a-hard-rule]]
+- Related: [[maxims/reduce-complexity-before-adding-branches]]

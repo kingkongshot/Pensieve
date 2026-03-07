@@ -1,41 +1,41 @@
-# 目录结构
+# Directory Layout
 
-Pensieve 有三个固定锚点：
+Pensieve has three fixed anchor points:
 
-- **skill 根目录**：git clone 下来的系统文件
-- **用户数据目录**：跟 skill 根并列存在、但被 git 忽略的本地知识数据
-- **project 根目录**：隐藏运行时状态
+- **skill root directory**: system files from the git clone
+- **user data directories**: local knowledge data that coexists alongside the skill root but is ignored by git
+- **project root directory**: hidden runtime state
 
-推荐安装方式是直接把 `main` 分支 clone 到项目内的 `.claude/skills/pensieve/`。默认布局如下：
+The recommended installation method is to clone the `main` branch directly into `.claude/skills/pensieve/` within the project. The default layout is as follows:
 
 ```text
 <skill-root>/
-├── SKILL.md                # 生成型路由文件（generated, gitignored）
-├── .src/                   # 系统脚本、模板、规范（tracked）
-├── agents/                 # agent 配置（tracked）
-├── maxims/                 # 用户数据（ignored）
-├── decisions/              # 用户数据（ignored）
-├── knowledge/              # 用户数据（ignored）
-└── pipelines/              # 用户数据（ignored）
+├── SKILL.md                # generated routing file (generated, gitignored)
+├── .src/                   # system scripts, templates, specs (tracked)
+├── agents/                 # agent configuration (tracked)
+├── maxims/                 # user data (ignored)
+├── decisions/              # user data (ignored)
+├── knowledge/              # user data (ignored)
+└── pipelines/              # user data (ignored)
 
 <project-root>/
-└── .state/                 # 运行时状态、报告、marker、缓存、图谱快照
+└── .state/                 # runtime state, reports, markers, caches, graph snapshots
 ```
 
-说明：
+Notes:
 
-- `.src/`、`agents/` 是 tracked 系统文件，跟着 `git pull` 更新
-- 根目录 `SKILL.md` 是固定位置的生成文件，由 `init/doctor/migrate/upgrade/self-improve/sync` 刷新，并由 `.gitignore` 忽略
-- `maxims/decisions/knowledge/pipelines` 是用户数据，初始化后本地创建，并由根 `.gitignore` 忽略
-- `.state/` 默认位于项目根目录，用来存放 doctor 报告、迁移备份、session marker、自动生成图谱等运行期产物
-- `maintain-project-skill.sh` 会重写根目录 `SKILL.md`
-- `generate-user-data-graph.sh` / `doctor` 默认把图谱输出到 `.state/pensieve-user-data-graph.md`
-- 只要某个目录包含 `.src/manifest.json`，它就是当前系统 skill 根目录；`SKILL.md` 可以后生成
+- `.src/`, `agents/` are tracked system files, updated with `git pull`
+- The root-level `SKILL.md` is a generated file at a fixed location, refreshed by `init/doctor/migrate/upgrade/self-improve/sync`, and ignored by `.gitignore`
+- `maxims/decisions/knowledge/pipelines` are user data, created locally after initialization, and ignored by the root `.gitignore`
+- `.state/` defaults to the project root directory, used for storing doctor reports, migration backups, session markers, auto-generated graphs, and other runtime artifacts
+- `maintain-project-skill.sh` rewrites the root-level `SKILL.md`
+- `generate-user-data-graph.sh` / `doctor` outputs the graph to `.state/pensieve-user-data-graph.md` by default
+- As long as a directory contains `.src/manifest.json`, it is the current system skill root directory; `SKILL.md` can be generated afterwards
 
-## 项目内旧路径（legacy）
+## Legacy paths within the project
 
-在项目工作区里，以下路径视为旧残留，应由 `migrate` 清理：
+Within the project workspace, the following paths are considered legacy remnants and should be cleaned up by `migrate`:
 
 - `skills/pensieve/`
 - `.claude/pensieve/`
-- 独立 graph 文件：`_pensieve-graph*.md`、`pensieve-graph*.md`、`graph*.md`
+- Standalone graph files: `_pensieve-graph*.md`, `pensieve-graph*.md`, `graph*.md`

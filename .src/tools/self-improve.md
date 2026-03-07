@@ -1,36 +1,36 @@
 ---
-description: 从对话、diff、review 结果中提取可复用结论，写入 maxim/decision/knowledge/pipeline，并同步图谱。
+description: Extract reusable conclusions from conversations, diffs, and review results. Write them to maxim/decision/knowledge/pipeline and sync the graph.
 ---
 
-# Self-Improve 工具
+# Self-Improve Tool
 
-> 工具边界见 `.src/references/tool-boundaries.md` | 共享规则见 `.src/references/shared-rules.md`
+> Tool boundaries: see `.src/references/tool-boundaries.md` | Shared rules: see `.src/references/shared-rules.md`
 
 ## Use when
 
-- 一轮任务结束后有明确可复用结论
-- review 里出现反复可提炼的模式
+- A task round ends with clear reusable conclusions
+- Repeatedly extractable patterns emerge during review
 
-## 写入位置
+## Write targets
 
 - `maxim` → `maxims/{one-sentence-conclusion}.md`
 - `decision` → `decisions/{date}-{conclusion}.md`
 - `pipeline` → `pipelines/run-when-*.md`
 - `knowledge` → `knowledge/{name}/content.md`
 
-写入前先读：
+Read before writing:
 
 - `.src/references/maxims.md`
 - `.src/references/decisions.md`
 - `.src/references/pipelines.md`
 - `.src/references/knowledge.md`
 
-## 写入后刷新
+## Post-write refresh
 
-写入用户数据后，刷新生成型 SKILL.md 和图谱：
+After writing user data, refresh the generated SKILL.md and graph:
 
 ```bash
-bash .src/scripts/maintain-project-skill.sh --event self-improve --note "描述"
+bash .src/scripts/maintain-project-skill.sh --event self-improve --note "description"
 ```
 
-Claude Code 环境下由 hook 自动触发，其他环境须手动运行。
+In a Claude Code environment this is triggered automatically by hooks; in other environments it must be run manually.

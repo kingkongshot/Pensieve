@@ -1,151 +1,151 @@
 ---
 id: skill-lifecycle
 type: knowledge
-title: Pensieve 安装与更新
+title: Pensieve Installation and Updates
 status: active
 created: 2026-03-06
 updated: 2026-03-07
 tags: [pensieve, install, update, operations]
 ---
 
-# Pensieve 安装与更新
+# Pensieve Installation and Updates
 
-当用户询问如何安装、初始化、更新、重装、卸载 Pensieve 本身时，先读本文件。
+When the user asks how to install, initialize, update, reinstall, or uninstall Pensieve itself, read this file first.
 
-## 安装
+## Installation
 
-### 方式 A：安装 main 分支 skill（必需）
+### Method A: Install the main branch skill (required)
 
-把仓库直接 clone 到项目里的 skill 目录：
+Clone the repository directly into the project's skill directory:
 
 ```bash
-git clone -b zh https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
+git clone -b main https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
 ```
 
-说明：
+Notes:
 
-- `main` 分支仓库根就是 skill 根，不再有 `skill-source/pensieve/` 这一层
-- tracked 系统文件是 `.src/`、`agents/`
-- 根目录 `SKILL.md` 是生成文件，初始化后写入固定位置，并由 `.gitignore` 忽略
-- 用户数据目录是 `maxims/decisions/knowledge/pipelines`
-- 用户数据目录与生成的 `SKILL.md` 都由根 `.gitignore` 忽略，所以 `git pull` 不会覆盖它们
-- 不再依赖 `npx skills add --copy`
+- The `main` branch repository root is the skill root — there is no longer a `skill-source/pensieve/` layer
+- Tracked system files are `.src/`, `agents/`
+- The root-level `SKILL.md` is a generated file, written to a fixed location after initialization, and ignored by `.gitignore`
+- User data directories are `maxims/decisions/knowledge/pipelines`
+- User data directories and the generated `SKILL.md` are both ignored by the root `.gitignore`, so `git pull` will not overwrite them
+- No longer depends on `npx skills add --copy`
 
-安装后：
+After installation:
 
-1. 让 agent 执行 `init`
-2. 或者在 skill 根目录手工执行：
+1. Have the agent run `init`
+2. Or manually execute in the skill root directory:
 
 ```bash
 bash .src/scripts/init-project-data.sh
 ```
 
-### 方式 B：安装 Claude plugin hooks（可选增量）
+### Method B: Install Claude plugin hooks (optional add-on)
 
-hooks 不在 `main` 分支，单独放在 `claude-plugin` 分支，通过 marketplace 安装：
+Hooks are not on the `main` branch; they are on a separate `claude-plugin` branch, installed via marketplace:
 
 ```bash
 claude plugin marketplace add kingkongshot/Pensieve#claude-plugin
 claude plugin install pensieve@kingkongshot-marketplace --scope project
 ```
 
-说明：
+Notes:
 
-- plugin 只提供 hooks，不携带 skill 内容
-- hooks 和 skill 生命周期解耦：plugin 用 marketplace 更新，skill 用 git 更新
-- 如果你要 Claude hooks，仍然需要先完成方式 A 的 skill clone
+- The plugin only provides hooks; it does not carry skill content
+- Hooks and skill lifecycles are decoupled: the plugin updates via marketplace, the skill updates via git
+- If you want Claude hooks, you still need to complete Method A's skill clone first
 
-## 初始化后验证
+## Post-initialization verification
 
 ```bash
 bash .src/scripts/run-doctor.sh --strict
 ```
 
-PASS 条件：
+PASS conditions:
 
-- `.src/` 存在
-- `agents/` 存在
-- 根目录 `SKILL.md` 已生成
-- `maxims/decisions/knowledge/pipelines` 目录齐全
-- 项目根目录生成 `.state/`
-- 默认 pipeline 与 taste-review knowledge 已种子化
+- `.src/` exists
+- `agents/` exists
+- Root-level `SKILL.md` has been generated
+- `maxims/decisions/knowledge/pipelines` directories are all present
+- `.state/` is generated in the project root
+- Default pipelines and taste-review knowledge have been seeded
 
-## 更新
+## Updates
 
-### 更新 main 分支 skill
+### Updating the main branch skill
 
 ```bash
 cd .claude/skills/pensieve
 git pull --ff-only
 ```
 
-更新后固定顺序：
+Fixed sequence after updating:
 
 ```bash
 bash .src/scripts/run-doctor.sh --strict
 ```
 
-如果 `doctor` 报结构迁移类问题，再执行：
+If `doctor` reports structural migration issues, then run:
 
 ```bash
 bash .src/scripts/run-migrate.sh
 bash .src/scripts/run-doctor.sh --strict
 ```
 
-### 更新 claude-plugin 分支 hooks
+### Updating claude-plugin branch hooks
 
 ```bash
 claude plugin update pensieve
 ```
 
-交互式等价命令：
+Interactive equivalent command:
 
 ```text
 /plugin update pensieve
 ```
 
-它只更新 hooks，不影响 main 分支 skill clone 里的用户数据。
+This only updates hooks and does not affect user data in the main branch skill clone.
 
-## 重装
+## Reinstallation
 
-如果系统文件被你自己改乱了，最简单的重装方式是：
+If system files have been corrupted by your own changes, the simplest reinstallation method is:
 
-1. 备份本地用户数据目录：`maxims/`、`decisions/`、`knowledge/`、`pipelines/`
-2. 删除旧的 skill checkout
-3. 重新执行安装
-4. 跑 `init`
-5. 跑 `doctor`
+1. Back up local user data directories: `maxims/`, `decisions/`, `knowledge/`, `pipelines/`
+2. Delete the old skill checkout
+3. Re-run the installation
+4. Run `init`
+5. Run `doctor`
 
-如果只是正常升级，不要重装，直接 `git pull --ff-only`
+If it is just a normal upgrade, do not reinstall — use `git pull --ff-only` directly.
 
-## 卸载
+## Uninstallation
 
-删除已安装的 skill 根目录即可。
+Simply delete the installed skill root directory.
 
-如果还要保留用户数据，先备份：
+If you also want to preserve user data, back up first:
 
 - `maxims/`
 - `decisions/`
 - `knowledge/`
 - `pipelines/`
-- `.state/`（如果想保留体检报告、迁移备份、session marker）
+- `.state/` (if you want to keep health check reports, migration backups, session markers)
 
-## Claude 增量能力
+## Claude add-on capabilities
 
-如果额外安装了 `claude-plugin` 分支，还会多出：
+If the `claude-plugin` branch is also installed, you additionally get:
 
-- SessionStart marker 检查
-- PreToolUse Explore/Plan prompt 注入
-- PostToolUse 图谱与 auto memory 自动同步
-- Claude 原生 `/plugin update` 生命周期
+- SessionStart marker check
+- PreToolUse Explore/Plan prompt injection
+- PostToolUse graph and auto memory auto-sync
+- Claude native `/plugin update` lifecycle
 
-## 路由规则
+## Routing rules
 
-- 问“怎么安装/重装 Pensieve”：
-  先读本文件，再引导到 `init`
-- 问“怎么更新 Pensieve”：
-  先读本文件，再引导到 `upgrade`
-- 问“怎么清理旧结构/旧 graph”：
-  先读本文件，再引导到 `migrate`
-- 问“安装后怎么确认正常”：
-  先读本文件，再引导到 `doctor`
+- Question "How to install/reinstall Pensieve":
+  Read this file first, then guide to `init`
+- Question "How to update Pensieve":
+  Read this file first, then guide to `upgrade`
+- Question "How to clean up old structures/old graph":
+  Read this file first, then guide to `migrate`
+- Question "How to verify everything is fine after installation":
+  Read this file first, then guide to `doctor`

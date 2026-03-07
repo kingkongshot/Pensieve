@@ -1,37 +1,37 @@
 ---
-description: 初始化当前用户数据根目录并补齐种子文件，执行基线探索与代码审查，产出可沉淀候选。幂等，不覆盖已有用户数据。
+description: Initialize the current user data root directory and populate seed files. Perform baseline exploration and code review, producing settleable candidates. Idempotent; does not overwrite existing user data.
 ---
 
-# Init 工具
+# Init Tool
 
-> 工具边界见 `.src/references/tool-boundaries.md` | 共享规则见 `.src/references/shared-rules.md`
+> Tool boundaries: see `.src/references/tool-boundaries.md` | Shared rules: see `.src/references/shared-rules.md`
 
 ## Use when
 
-- 首次接入 Pensieve
-- 用户需要安装后初始化或重装后补齐默认结构
-- 缺少 `maxims/decisions/knowledge/pipelines` 基础目录
-- 缺少默认 pipeline 或 taste-review 知识
+- First time onboarding to Pensieve
+- User needs post-install initialization or re-populating the default structure after reinstall
+- Missing base directories: `maxims/decisions/knowledge/pipelines`
+- Missing default pipeline or taste-review knowledge
 
-如果用户先问“怎么安装/重装 Pensieve”，先读 `.src/references/skill-lifecycle.md`，再执行本工具。
+If the user first asks "how to install/reinstall Pensieve", read `.src/references/skill-lifecycle.md` first, then execute this tool.
 
 ## Failure fallback
 
-- `.src/scripts/init-project-data.sh` 缺失：停止并报告 skill 安装不完整
-- 初始化脚本失败：输出失败原因，停止后续动作
+- `.src/scripts/init-project-data.sh` missing: stop and report skill installation is incomplete
+- Init script fails: output the failure reason, stop subsequent actions
 
-## 标准执行
+## Standard execution
 
 ```bash
 bash .src/scripts/init-project-data.sh
 ```
 
-然后：
+Then:
 
-1. 读取 `pipelines/run-when-reviewing-code.md`
-2. 基于最近提交与热点文件做一次探索
-3. 产出“可沉淀候选清单”，但不自动写入
-4. 最后提醒用户手动跑 doctor：
+1. Read `pipelines/run-when-reviewing-code.md`
+2. Perform an exploration based on recent commits and hot files
+3. Produce a "settleable candidates list", but do not auto-write
+4. Finally remind the user to manually run doctor:
 
 ```bash
 bash .src/scripts/run-doctor.sh --strict

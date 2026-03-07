@@ -1,63 +1,63 @@
-# Decisions（决策）
+# Decisions
 
-记录当前项目下主动做出的选择，以及为什么这么选。
+Record the choices actively made in the current project, and why they were made.
 
-## 什么时候写 decision
+## When to write a decision
 
-满足任一条就值得记：
+Worth recording if any of the following apply:
 
-1. 删掉它，未来更容易犯错
-2. 三个月后的人读完它，能少走很多弯路
-3. 它明确了模块边界、职责或取舍
+1. Removing it would make future mistakes more likely
+2. Someone reading it three months later would avoid many detours
+3. It clarifies module boundaries, responsibilities, or trade-offs
 
-如果内容描述的是客观事实，写到 `knowledge/`。  
-如果内容是跨项目硬规则，升级到 `maxims/`。
+If the content describes an objective fact, write it in `knowledge/`.
+If the content is a cross-project hard rule, promote it to `maxims/`.
 
-## 存储位置
+## Storage location
 
-| 阶段 | 位置 | 说明 |
+| Stage | Location | Description |
 |---|---|---|
-| 固化后 | `decisions/` | 项目长期决策 |
+| Finalized | `decisions/` | Long-term project decisions |
 
-正式文件命名：
+Formal file naming:
 
 ```text
 <skill-root>/decisions/{date}-{statement}.md
 ```
 
-## 强制要求
+## Mandatory requirements
 
-- 每条 `decision` 至少带一条有效 `[[...]]` 链接
-- 必须写清 `Context` 和 `Alternatives Considered`
-- 必须写“下次少问什么 / 少查什么 / 何时失效”
+- Each `decision` must have at least one valid `[[...]]` link
+- Must clearly state `Context` and `Alternatives Considered`
+- Must include "What to ask less next time / What to look up less next time / Invalidation condition"
 
-## 推荐格式
+## Recommended format
 
 ```markdown
-# {决策标题}
+# {Decision title}
 
-## 一句话结论
-> {最终选择}
+## One-line Conclusion
+> {Final choice}
 
-## 上下文链接
-- 基于：[[前置知识或决策]]
-- 导致：[[后续流程或决策]]
-- 相关：[[平行主题]]
+## Context Links
+- Based on: [[prerequisite knowledge or decision]]
+- Leads to: [[subsequent process or decision]]
+- Related: [[parallel topic]]
 
 ## Context
 
 ## Problem
 
 ## Alternatives Considered
-- 方案 A：为何不用
-- 方案 B：为何不用
+- Option A: why not used
+- Option B: why not used
 
 ## Decision
 
 ## Consequence
 
-## 探索减负
-- 下次可以少问什么：
-- 下次可以少查什么：
-- 失效条件：
+## Exploration Reduction
+- What to ask less next time:
+- What to look up less next time:
+- Invalidation condition:
 ```

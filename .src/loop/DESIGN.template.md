@@ -1,11 +1,11 @@
-# 设计草案
+# Design Draft
 
-## 背景
+## Background
 
-## 约束
+## Constraints
 
-## 方案
+## Approach
 
-## 风险
+## Risks
 
-## 验证
+## Verification

@@ -24,7 +24,7 @@ tags: [pensieve, maxim]
 ## Boundaries
 - Small, local branches are acceptable when they improve clarity.
 
-## 上下文链接（recommended）
-- 基于：[[knowledge/taste-review/content]]
-- 相关：[[maxims/prefer-pragmatic-solutions-over-theoretical-completeness]]
-- 相关：[[maxims/eliminate-special-cases-by-redesigning-data-flow]]
+## Context Links (recommended)
+- Based on: [[knowledge/taste-review/content]]
+- Related: [[maxims/prefer-pragmatic-solutions-over-theoretical-completeness]]
+- Related: [[maxims/eliminate-special-cases-by-redesigning-data-flow]]

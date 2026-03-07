@@ -1,11 +1,11 @@
-# 需求基线
+# Requirements Baseline
 
-## 目标
+## Goals
 
-## 非目标
+## Non-goals
 
-## 输入
+## Inputs
 
-## 输出
+## Outputs
 
-## 验收标准
+## Acceptance Criteria

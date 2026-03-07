@@ -1,30 +1,30 @@
 ---
 id: taste-review-content
 type: knowledge
-title: 代码品味审查知识库
+title: Code Taste Review Knowledge Base
 status: active
 created: 2026-02-28
 updated: 2026-02-28
 tags: [pensieve, knowledge, review, taste]
 ---
 
-# 代码品味审查知识库
+# Code Taste Review Knowledge Base
 
-用于代码审查的核心哲学、预警信号与经典案例。
+Core philosophy, warning signals, and classic examples for code review.
 
-## 来源
+## Sources
 
-- Linus Torvalds 公开分享与 Linux Kernel 风格
-- John Ousterhout《A Philosophy of Software Design》
-- Google Engineering Practices（Code Review 指南）
+- Linus Torvalds public talks & Linux Kernel style
+- John Ousterhout "A Philosophy of Software Design"
+- Google Engineering Practices (Code Review guidelines)
 
-## 支撑资料
+## Supporting Materials
 
-`source/` 目录可放项目定制参考。语言风格指南建议从官方仓库拉取：
+The `source/` directory can hold project-specific references. Language style guides are best pulled from their official repositories:
 
 - Google Style Guides: https://github.com/google/styleguide
 
-示例（项目使用 Python + TypeScript）：
+Example (project uses Python + TypeScript):
 
 ```bash
 mkdir -p source/google-style-guides
@@ -32,87 +32,87 @@ curl -o source/google-style-guides/pyguide.md https://raw.githubusercontent.com/
 curl -o source/google-style-guides/tsguide.html https://raw.githubusercontent.com/google/styleguide/gh-pages/tsguide.html
 ```
 
-## 摘要
+## Summary
 
-该知识库融合三条主线：
+This knowledge base weaves three threads together:
 
-1. Linus：通过数据结构和重写消除特殊分支
-2. Ousterhout：通过模块深度与抽象控制复杂度
-3. Google：以代码健康为目标，按优先级审查
+1. Linus: Eliminate special branches through data structures and rewrites
+2. Ousterhout: Control complexity through module depth and abstraction
+3. Google: Review by priority with code health as the goal
 
-## 适用场景
+## Applicable Scenarios
 
-- 需要为审查意见提供理论依据
-- 需要识别“可运行但不可维护”的实现
-- 需要统一团队对复杂度和代码健康的判断口径
+- Need theoretical backing for review comments
+- Need to identify implementations that "work but are unmaintainable"
+- Need to align the team on complexity and code health standards
 
 ---
 
-## 核心原则
+## Core Principles
 
-### 1) Linus：好品味（Good Taste）
+### 1) Linus: Good Taste
 
-核心思想：
-- 通过重构消除特殊情况，而不是堆条件分支
-- 先想数据结构，再写控制流
-- 控制嵌套深度与函数长度
-- 用户可见行为是硬边界（不要随意改变）
+Key ideas:
+- Eliminate special cases through refactoring, not by piling on conditional branches
+- Think about data structures first, then write control flow
+- Control nesting depth and function length
+- User-visible behavior is a hard boundary (do not change it casually)
 
-### 2) Ousterhout：复杂度管理
+### 2) Ousterhout: Complexity Management
 
-三大复杂度症状：
+Three symptoms of complexity:
 
-1. **Change amplification**：小改动牵一发动全身
-2. **Cognitive load**：改动前需要理解太多前置信息
-3. **Unknown unknowns**：不清楚还要改哪里
+1. **Change amplification**: a small change ripples across the codebase
+2. **Cognitive load**: too much context required before making a change
+3. **Unknown unknowns**: unclear what else needs to change
 
-设计要点：
-- 接口要简单、模块要“深”
-- 把复杂度尽量下沉到底层
-- 至少做两版设计对比（Design it twice）
+Design principles:
+- Interfaces should be simple; modules should be "deep"
+- Push complexity down to lower layers as much as possible
+- Design it twice and compare alternatives
 
-### 3) Google：代码健康优先
+### 3) Google: Code Health First
 
-审查顺序建议：
+Recommended review order:
 
 `Design -> Functionality -> Complexity -> Tests -> Naming -> Comments -> Style -> Docs`
 
-实践重点：
-- 小而自洽的变更更容易高质量审查
-- 改善代码健康的改动不应因“追求完美”被长期阻塞
+Practical focus:
+- Small, self-contained changes are easier to review at high quality
+- Changes that improve overall code health should not be blocked by pursuit of perfection
 
 ---
 
-## 预警信号清单
+## Warning Signal Checklist
 
-### 结构预警
+### Structural Warnings
 
-| 信号 | 阈值 | 严重级别 |
+| Signal | Threshold | Severity |
 |---|---|---|
-| 嵌套层级 | > 3 层 | CRITICAL |
-| 函数长度 | > 100 行 | CRITICAL |
-| 局部变量数量 | > 10 | WARNING |
-| 资源清理路径 | 多出口且分散清理 | WARNING |
+| Nesting depth | > 3 levels | CRITICAL |
+| Function length | > 100 lines | CRITICAL |
+| Local variable count | > 10 | WARNING |
+| Resource cleanup paths | Multiple exits with scattered cleanup | WARNING |
 
-### 错误处理预警
+### Error Handling Warnings
 
-| 信号 | 描述 | 严重级别 |
+| Signal | Description | Severity |
 |---|---|---|
-| 防御式默认值泛滥 | 例如 `?? 0` / `|| default` 到处出现 | WARNING |
-| 异常处理压过主逻辑 | try/catch 比业务代码还多 | CRITICAL |
-| fallback 掩盖上游问题 | 导致问题不暴露 | WARNING |
+| Defensive default value overuse | e.g., `?? 0` / `|| default` everywhere | WARNING |
+| Exception handling overshadows main logic | try/catch outnumbers business code | CRITICAL |
+| Fallback masks upstream issues | Problems never surface | WARNING |
 
-### 模块与接口预警
+### Module & Interface Warnings
 
-| 信号 | 描述 | 严重级别 |
+| Signal | Description | Severity |
 |---|---|---|
-| 浅模块 | 接口复杂度接近实现复杂度 | CRITICAL |
-| 信息泄漏 | 模块内部决策暴露到外部 | CRITICAL |
-| 命名困难 | 难以命名、难以解释 | WARNING |
+| Shallow module | Interface complexity rivals implementation complexity | CRITICAL |
+| Information leakage | Internal decisions exposed externally | CRITICAL |
+| Naming difficulty | Hard to name, hard to explain | WARNING |
 
 ---
 
-## 经典引用（原文）
+## Classic Quotes (Original)
 
 ### Linus Torvalds
 
@@ -131,11 +131,11 @@ curl -o source/google-style-guides/tsguide.html https://raw.githubusercontent.co
 
 ---
 
-## 经典案例
+## Classic Examples
 
-### 1) 链表删除：消除特殊分支
+### 1) Linked List Deletion: Eliminating Special Branches
 
-**坏味道（存在头节点特殊分支）**：
+**Bad taste (special branch for head node)**:
 
 ```c
 void remove_list_entry(List *list, Entry *entry) {
@@ -153,7 +153,7 @@ void remove_list_entry(List *list, Entry *entry) {
 }
 ```
 
-**好味道（统一路径）**：
+**Good taste (unified path)**:
 
 ```c
 void remove_list_entry(List *list, Entry *entry) {
@@ -164,11 +164,11 @@ void remove_list_entry(List *list, Entry *entry) {
 }
 ```
 
-关键点：使用间接指针后，“删除头节点”和“删除中间节点”是同一操作。
+Key point: With an indirect pointer, "deleting the head node" and "deleting a middle node" become the same operation.
 
-### 2) 防御式默认值 vs 快速失败
+### 2) Defensive Defaults vs. Fail Fast
 
-**不推荐**：
+**Not recommended**:
 
 ```typescript
 function processUser(user: User | null) {
@@ -178,7 +178,7 @@ function processUser(user: User | null) {
 }
 ```
 
-**推荐**：
+**Recommended**:
 
 ```typescript
 function processUser(user: User) {
@@ -186,13 +186,13 @@ function processUser(user: User) {
 }
 ```
 
-关键点：不要吞掉上游错误；让类型系统和测试尽早暴露问题。
+Key point: Do not swallow upstream errors; let the type system and tests surface problems early.
 
 ---
 
-## 审查落地建议
+## Review Execution Recommendations
 
-- 先看设计与复杂度，再看风格细节
-- 先抓会导致回归的问题，再处理可选优化
-- 所有审查意见尽量绑定“可验证证据”（日志、测试、行为）
-- 可沉淀的结论及时写入 `decision` 或 `maxim`
+- Look at design and complexity first, then style details
+- Catch regression-causing issues first, then handle optional optimizations
+- Tie all review comments to verifiable evidence (logs, tests, behavior)
+- Promptly write settled conclusions into `decision` or `maxim`

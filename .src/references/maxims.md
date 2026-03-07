@@ -1,53 +1,53 @@
-# Maxims（准则）
+# Maxims
 
-跨项目、跨问题的长期 MUST 级规则。
+Cross-project, cross-problem, long-term MUST-level rules.
 
-## 放在这里的标准
+## Criteria for inclusion
 
-只有同时满足下面几条，才配进 `maxims/`：
+Only entries that satisfy all of the following belong in `maxims/`:
 
-1. 换项目仍成立
-2. 换语言仍成立
-3. 违反它会显著提高回归风险
-4. 能用一句话讲清楚
+1. Still holds when switching projects
+2. Still holds when switching languages
+3. Violating it significantly increases regression risk
+4. Can be stated in one sentence
 
-如果它只在当前项目有效，那不是 `maxim`，那是 `decision`。
+If it is only valid in the current project, it is not a `maxim` — it is a `decision`.
 
-## 存储位置
+## Storage location
 
 ```text
 <skill-root>/maxims/
 └── {one-sentence-conclusion}.md
 ```
 
-每条准则一个文件。  
-初始化时会从 `.src/templates/maxims/` 种子化默认条目；之后用户可自由修改，升级不覆盖。
+One file per maxim.
+During initialization, default entries are seeded from `.src/templates/maxims/`; afterwards users can freely modify them, and upgrades will not overwrite.
 
-## 推荐格式
+## Recommended format
 
 ```markdown
-# {一句话结论}
+# {One-line Conclusion}
 
-## 一句话结论
-> {可直接执行的一句话}
+## One-line Conclusion
+> {One actionable sentence}
 
-## 指导规则
+## Guidance
 - Rule 1
 - Rule 2
 
-## 边界
-- 什么情况下不适用
+## Boundaries
+- When it does not apply
 
-## 上下文链接（推荐）
-- 基于：[[相关 decision 或 knowledge]]
-- 导致：[[相关 pipeline 或 decision]]
-- 相关：[[相关 maxim]]
+## Context Links (recommended)
+- Based on: [[related decision or knowledge]]
+- Leads to: [[related pipeline or decision]]
+- Related: [[related maxim]]
 ```
 
-## 规则
+## Rules
 
-- `maxim` 应保持稀缺，不要把一次性偏好塞进来
-- 链接是推荐项，但有来源时最好写清楚
-- `基于` 只能指向 `knowledge/decision`
-- `导致` 只能指向 `pipeline/decision`
-- `相关` 适合指向平行 `maxim`
+- `maxim` should remain scarce — do not stuff one-off preferences in here
+- Links are recommended, but when sources exist they should be clearly stated
+- `Based on` can only point to `knowledge/decision`
+- `Leads to` can only point to `pipeline/decision`
+- `Related` is suitable for pointing to parallel `maxim` entries

@@ -1,71 +1,71 @@
 ---
 id: knowledge-readme
 type: knowledge
-title: Knowledge 规范
+title: Knowledge Specification
 status: active
 created: 2026-02-28
 updated: 2026-03-06
 tags: [pensieve, knowledge, spec]
 ---
 
-# Knowledge（知识）
+# Knowledge
 
-`knowledge` 只承载 IS：系统事实、外部参考、可验证行为。
+`knowledge` only carries IS: system facts, external references, verifiable behavior.
 
-## 什么时候写 knowledge
+## When to write knowledge
 
-当一条信息不写下来，会反复拖慢执行：
+When a piece of information, if not written down, will repeatedly slow down execution:
 
-- 每次都要重新搜文档
-- 每次都要从代码猜边界
-- 模型训练数据过时
-- 某个流程依赖分散的外部标准
+- Having to re-search documentation every time
+- Having to guess boundaries from code every time
+- Model training data is outdated
+- A process depends on scattered external standards
 
-如果它是“我们决定怎么做”，写到 `decisions/`。  
-如果它是“必须这样做”，写到 `maxims/`。
+If it is "how we decided to do it," write it in `decisions/`.
+If it is "must be done this way," write it in `maxims/`.
 
-## 存储位置
+## Storage location
 
 ```text
 <skill-root>/knowledge/{name}/
 ├── content.md
-└── source/        # 可选
+└── source/        # optional
 ```
 
-初始化时，系统会从 `.src/templates/knowledge/` 种子化默认条目。  
-一旦落到 `knowledge/`，它就是用户侧可维护数据。
+During initialization, the system seeds default entries from `.src/templates/knowledge/`.
+Once placed in `knowledge/`, it becomes user-side maintainable data.
 
-## 推荐格式
+## Recommended format
 
 ```markdown
-# {知识标题}
+# {Knowledge title}
 
 ## Source
-[原始链接、代码路径或会话来源]
+[Original link, code path, or conversation source]
 
 ## Summary
-[一句话说明它解决什么探索摩擦]
+[One sentence explaining what exploration friction it resolves]
 
 ## Content
-[正文]
+[Body]
 
 ## When to Use
-[什么场景下先读它]
+[In what scenarios to read it first]
 
-## 上下文链接（推荐）
-- 基于：[[前置知识或决策]]
-- 导致：[[受影响的决策或流程]]
-- 相关：[[相关主题]]
+## Context Links (recommended)
+- Based on: [[prerequisite knowledge or decision]]
+- Leads to: [[affected decision or process]]
+- Related: [[related topic]]
 ```
 
-## 探索型知识建议
+## Exploratory knowledge suggestions
 
-如果这条知识主要用于快速定位问题，尽量包含：
+If this knowledge entry is primarily for quickly locating problems, try to include:
 
-- 状态转换
-- 症状 -> 根因 -> 定位
-- 边界与所有权
-- 反模式
-- 验证信号
+- State transitions
+- Symptom -> root cause -> localization
+- Boundaries and ownership
+- Anti-patterns
+- Verification signals
 
-别把 `knowledge` 写成观点集。它必须能被验证或追溯。
+Do not turn `knowledge` into an opinion collection. It must be verifiable or traceable.
