@@ -136,12 +136,33 @@ project_root() {
     git -C "$sr" rev-parse --show-toplevel 2>/dev/null || pwd
 }
 
+_is_plugin_install() {
+    local sr="$1"
+    [[ "${PENSIEVE_INSTALL_MODE:-}" == "claude-plugin" ]] && return 0
+    local dir="$sr"
+    while [[ "$dir" != "/" ]]; do
+        if [[ -d "$dir/.claude-plugin" ]]; then
+            return 0
+        fi
+        dir="$(cd "$dir/.." && pwd)"
+    done
+    return 1
+}
+
 user_data_root() {
     if [[ -n "${PENSIEVE_DATA_ROOT:-}" ]]; then
         to_posix_path "$PENSIEVE_DATA_ROOT"
         return 0
     fi
-    skill_root "${1:-$(pwd)}"
+    local sr
+    sr="$(skill_root "${1:-$(pwd)}")"
+    if _is_plugin_install "$sr"; then
+        local pr
+        pr="$(project_root "${1:-$(pwd)}")"
+        echo "$pr/.claude/skills/pensieve"
+        return 0
+    fi
+    echo "$sr"
 }
 
 skill_manifest_file() {
