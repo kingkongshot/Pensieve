@@ -331,6 +331,15 @@ if not root.exists():
         root,
     )
 
+skill_file = root / "SKILL.md"
+if not skill_file.is_file():
+    add_finding_by_id(
+        "STR-003",
+        "MUST_FIX",
+        "missing_skill_file",
+        skill_file,
+    )
+
 for d in required_dirs:
     p = root / d
     if not p.is_dir():

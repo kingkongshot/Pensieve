@@ -21,6 +21,37 @@
 | 三个月后忘了当初为什么这么设计 | decision 记录上下文和替代方案 |
 | 每次都要重新翻文档定位模块边界 | knowledge 缓存探索结果，直接复用 |
 
+## 从旧版本升级（< 1.0）
+
+1.0 重构了安装架构。如果你当前版本低于 1.0，**不要用 `git pull`**，需要完整卸载后重装。
+
+判断方法：如果你的 Pensieve 是通过 `claude plugin install` 安装的，或者找不到 `.claude/skills/pensieve/.src/manifest.json`，你就是旧版本。
+
+用户数据（`maxims/`、`decisions/`、`knowledge/`、`pipelines/`）会保留，其余全部清理：
+
+```bash
+# 1. 卸载 Claude 插件和缓存
+claude plugin uninstall pensieve 2>/dev/null
+rm -rf ~/.claude/plugins/cache/kingkongshot-marketplace/pensieve
+
+# 2. 清理 skill 目录（只保留用户数据）
+cd .claude/skills/pensieve
+rm -rf .src agents .git .gitignore SKILL.md LICENSE README.md .state .backup .obsidian temp resource
+
+# 3. 清理其他可能的旧 skill 路径
+rm -rf .agents/skills/pensieve
+
+# 4. 重新安装
+cd ../../..
+git clone -b experimental https://github.com/kingkongshot/Pensieve.git /tmp/pensieve-new
+cp -r /tmp/pensieve-new/{.git,.gitignore,.src,agents,LICENSE,README.md} .claude/skills/pensieve/
+rm -rf /tmp/pensieve-new
+
+# 5. 初始化 + 体检
+bash .claude/skills/pensieve/.src/scripts/init-project-data.sh
+bash .claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
+```
+
 ## 安装
 
 ```bash

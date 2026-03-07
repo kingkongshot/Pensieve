@@ -53,6 +53,10 @@
       "message": "缺少关键目录: {dir}/",
       "recommendation": "执行 init 或 migrate 补齐目录结构，并复跑 doctor。"
     },
+    "STR-003": {
+      "message": "SKILL.md 路由文件不存在。",
+      "recommendation": "执行 init 生成 SKILL.md。"
+    },
     "STR-101": {
       "message": "发现旧版路径残留，与当前用户数据根目录并存。",
       "recommendation": "执行 migrate 清理旧路径，收敛到当前用户数据根目录。"

@@ -245,7 +245,7 @@ if not initialized:
     user_parts.append("项目未初始化")
 if not self_check_ok:
     user_parts.append("体检版本不匹配")
-user_summary = f"Pensieve（{skill_version}）：{'，'.join(user_parts)}。输入 /pensieve 执行修复。"
+user_summary = f"Pensieve（{skill_version}）：{'，'.join(user_parts)}。输入 /pensieve doctor 执行修复。"
 
 payload = {
     "hookSpecificOutput": {
