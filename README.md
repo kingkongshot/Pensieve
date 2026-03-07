@@ -34,6 +34,15 @@ claude plugin install pensieve@kingkongshot-marketplace --scope project
 git clone -b experimental https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
 ```
 
+> **已有用户数据？** 如果 `.claude/skills/pensieve/` 已存在（里面有 `decisions/`、`knowledge/` 等），**不要删除它**。先把数据挪到安全位置，clone 后再搬回来：
+>
+> ```bash
+> mv .claude/skills/pensieve /tmp/pensieve-data
+> git clone -b experimental https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
+> cp -r /tmp/pensieve-data/{decisions,knowledge,maxims,pipelines,loop} .claude/skills/pensieve/ 2>/dev/null
+> rm -rf /tmp/pensieve-data
+> ```
+
 ### 3. 初始化
 
 ```bash
@@ -51,6 +60,8 @@ cd .claude/skills/pensieve
 git pull --ff-only
 bash .src/scripts/run-doctor.sh --strict
 ```
+
+> **铁律：任何操作都不应删除用户数据。** `git pull` 只更新系统文件，用户数据由 `.gitignore` 保护。更新后跑一次 `doctor` 确认数据完整即可。
 
 完整的安装、更新、卸载说明见 [.src/references/skill-lifecycle.md](.src/references/skill-lifecycle.md)。
 
