@@ -31,7 +31,7 @@ claude plugin install pensieve@kingkongshot-marketplace --scope project
 ### 2. 安装 skill
 
 ```bash
-git clone https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
+git clone -b experimental https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
 ```
 
 ### 3. 初始化

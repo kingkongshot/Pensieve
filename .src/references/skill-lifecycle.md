@@ -19,7 +19,7 @@ tags: [pensieve, install, update, operations]
 把仓库直接 clone 到项目里的 skill 目录：
 
 ```bash
-git clone https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
+git clone -b experimental https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
 ```
 
 说明：
