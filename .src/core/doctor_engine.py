@@ -176,7 +176,7 @@ def _build_report(
         lines.append("3. 将有效修复经验沉淀到 `self-improve`。")
     else:
         lines.append("1. 当前无需结构修复。")
-        lines.append("2. 继续按现有流程使用 loop/self-improve。")
+        lines.append("2. 继续按现有流程使用 self-improve。")
         lines.append("3. 下次升级后重复执行 doctor。")
     lines.append("")
     lines.append("## 6) 规则命中明细（附录）")

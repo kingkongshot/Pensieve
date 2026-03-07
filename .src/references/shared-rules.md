@@ -4,7 +4,7 @@
 
 1. `.src/` 是系统文件目录；不要把用户数据或运行时状态写进去。
 2. `.state/` 是隐藏运行时状态目录；报告、marker、缓存等脏数据写这里。
-3. `maxims/decisions/knowledge/pipelines/loop` 是用户数据目录；除此之外，只有根目录生成型 `SKILL.md` 可以被维护脚本重写。
+3. `maxims/decisions/knowledge/pipelines` 是用户数据目录；除此之外，只有根目录生成型 `SKILL.md` 可以被维护脚本重写。
 4. 先确认再执行。用户没明确要求时，不自动跑长流程。
 5. 先读规范再写数据：写 maxim/decision/knowledge/pipeline 前先读 `.src/references/` 里的对应规范。
 6. 链接保持连通：`decision/pipeline` 至少一条 `[[...]]` 链接。
@@ -20,7 +20,6 @@
   - `decisions/*.md`
   - `knowledge/*/content.md`
   - `pipelines/run-when-*.md`
-  - `loop/<date>-<slug>/`
 
 ## 语义层
 

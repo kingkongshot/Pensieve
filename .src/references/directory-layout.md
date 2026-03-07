@@ -16,8 +16,7 @@ Pensieve 有三个固定锚点：
 ├── maxims/                 # 用户数据（ignored）
 ├── decisions/              # 用户数据（ignored）
 ├── knowledge/              # 用户数据（ignored）
-├── pipelines/              # 用户数据（ignored）
-└── loop/                   # 用户数据（ignored）
+└── pipelines/              # 用户数据（ignored）
 
 <project-root>/
 └── .state/                 # 运行时状态、报告、marker、缓存、图谱快照
@@ -27,7 +26,7 @@ Pensieve 有三个固定锚点：
 
 - `.src/`、`agents/` 是 tracked 系统文件，跟着 `git pull` 更新
 - 根目录 `SKILL.md` 是固定位置的生成文件，由 `init/doctor/migrate/upgrade/self-improve/sync` 刷新，并由 `.gitignore` 忽略
-- `maxims/decisions/knowledge/pipelines/loop` 是用户数据，初始化后本地创建，并由根 `.gitignore` 忽略
+- `maxims/decisions/knowledge/pipelines` 是用户数据，初始化后本地创建，并由根 `.gitignore` 忽略
 - `.state/` 默认位于项目根目录，用来存放 doctor 报告、迁移备份、session marker、自动生成图谱等运行期产物
 - `maintain-project-skill.sh` 会重写根目录 `SKILL.md`
 - `generate-user-data-graph.sh` / `doctor` 默认把图谱输出到 `.state/pensieve-user-data-graph.md`

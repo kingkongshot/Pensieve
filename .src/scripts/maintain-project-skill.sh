@@ -66,7 +66,7 @@ SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
 GRAPH_SCRIPT="$SKILL_ROOT/.src/scripts/generate-user-data-graph.sh"
 AUTO_MEMORY_SCRIPT="$SKILL_ROOT/.src/scripts/maintain-auto-memory.sh"
 
-mkdir -p "$USER_DATA_ROOT"/{maxims,decisions,knowledge,pipelines,loop}
+mkdir -p "$USER_DATA_ROOT"/{maxims,decisions,knowledge,pipelines}
 
 if [[ -x "$GRAPH_SCRIPT" ]]; then
   bash "$GRAPH_SCRIPT" --root "$USER_DATA_ROOT" --output "$GRAPH_FILE" >/dev/null
@@ -128,7 +128,6 @@ TOOLS = [
     ("migrate", "Migrate"),
     ("doctor", "Doctor"),
     ("self-improve", "Self-Improve"),
-    ("loop", "Loop"),
 ]
 
 
@@ -210,7 +209,7 @@ if skill_file.exists():
 else:
     content = f"""---
 name: pensieve
-description: 项目知识库与工作流路由。knowledge 里有之前探索过的文件位置、模块边界、调用链路，可直接复用不必重新定位；decisions/maxims 是已定论的架构决定和编码准则，应遵守而非重新讨论；pipelines 是可复用的工作流程。完成任务后用 self-improve 沉淀新发现。提供 init、upgrade、migrate、doctor、self-improve、loop 六个工具。
+description: 项目知识库与工作流路由。knowledge 里有之前探索过的文件位置、模块边界、调用链路，可直接复用不必重新定位；decisions/maxims 是已定论的架构决定和编码准则，应遵守而非重新讨论；pipelines 是可复用的工作流程。完成任务后用 self-improve 沉淀新发现。提供 init、upgrade、migrate、doctor、self-improve 五个工具。
 ---
 
 # Pensieve
@@ -234,7 +233,6 @@ description: 项目知识库与工作流路由。knowledge 里有之前探索过
 - Decisions: `decisions/`
 - Knowledge: `knowledge/`
 - Pipelines: `pipelines/`
-- Loop: `loop/`
 
 ## Graph
 

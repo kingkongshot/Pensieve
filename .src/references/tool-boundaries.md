@@ -7,7 +7,6 @@
 | `migrate` | 旧路径迁移、关键文件对齐、残留清理 | 不更新版本，不给 PASS/FAIL |
 | `doctor` | 结构与格式体检，输出固定报告 | 不改业务代码 |
 | `self-improve` | 沉淀 maxim/decision/knowledge/pipeline | 不替代 init/migrate/doctor |
-| `loop` | 复杂任务拆解与循环执行 | 不处理版本升级和结构迁移 |
 
 ## 常见重定向
 
@@ -19,4 +18,3 @@
 | “清理旧路径/旧 graph” | `migrate` |
 | “检查数据是否有问题” | `doctor` |
 | “把这次经验沉淀下来” | `self-improve` |
-| “复杂需求拆一下” | `loop` |

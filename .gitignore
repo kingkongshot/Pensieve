@@ -8,9 +8,11 @@ push-to-github.sh
 # Hidden runtime state
 /.state/
 
+# Generated skill file (created by init, never tracked)
+/SKILL.md
+
 # Pensieve local user data (created by init, never tracked)
 /maxims/
 /decisions/
 /knowledge/
 /pipelines/
-/loop/

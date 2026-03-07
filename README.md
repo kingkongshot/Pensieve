@@ -66,7 +66,7 @@ bash .src/scripts/run-doctor.sh --strict
 
 ## 这次重构解决了什么
 
-旧方案依赖 `npx skills add --copy`。更新时它会整目录覆盖，用户积累的 `decisions/knowledge/maxims/pipelines/loop` 很容易被抹掉。
+旧方案依赖 `npx skills add --copy`。更新时它会整目录覆盖，用户积累的 `decisions/knowledge/maxims/pipelines` 很容易被抹掉。
 
 现在结构变成：
 
@@ -77,16 +77,15 @@ bash .src/scripts/run-doctor.sh --strict
 - `git pull` 只更新 tracked 系统文件（`.src/`、`agents/`、`SKILL.md`），用户数据不受影响
 - 运行期产物单独放在 `<project>/.state/`
 
-## 内置六个工具
+## 内置五个工具
 
-同一份权威 skill 提供六个工具：
+同一份权威 skill 提供五个工具：
 
 - `init`
 - `upgrade`
 - `migrate`
 - `doctor`
 - `self-improve`
-- `loop`
 
 ### `init`
 
@@ -107,10 +106,6 @@ bash .src/scripts/run-doctor.sh --strict
 ### `self-improve`
 
 从对话、diff、执行结果里提取洞察，按语义写入 `maxim / decision / knowledge / pipeline`。
-
-### `loop`
-
-把复杂任务拆成多个可验证任务，主窗口调度，子代理隔离执行。
 
 ## 四层知识模型
 
@@ -147,8 +142,7 @@ Pensieve 把项目知识分成四层：
 │           ├── maxims/      # local only, gitignored
 │           ├── decisions/   # local only, gitignored
 │           ├── knowledge/   # local only, gitignored
-│           ├── pipelines/   # local only, gitignored
-│           └── loop/        # local only, gitignored
+│           └── pipelines/   # local only, gitignored
 └── .state/                  # reports, markers, graph snapshots
 ```
 

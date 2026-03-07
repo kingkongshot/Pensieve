@@ -27,7 +27,7 @@ git clone -b experimental https://github.com/kingkongshot/Pensieve.git .claude/s
 - `main` 分支仓库根就是 skill 根，不再有 `skill-source/pensieve/` 这一层
 - tracked 系统文件是 `.src/`、`agents/`
 - 根目录 `SKILL.md` 是生成文件，初始化后写入固定位置，并由 `.gitignore` 忽略
-- 用户数据目录是 `maxims/decisions/knowledge/pipelines/loop`
+- 用户数据目录是 `maxims/decisions/knowledge/pipelines`
 - 用户数据目录与生成的 `SKILL.md` 都由根 `.gitignore` 忽略，所以 `git pull` 不会覆盖它们
 - 不再依赖 `npx skills add --copy`
 
@@ -66,7 +66,7 @@ PASS 条件：
 - `.src/` 存在
 - `agents/` 存在
 - 根目录 `SKILL.md` 已生成
-- `maxims/decisions/knowledge/pipelines/loop` 目录齐全
+- `maxims/decisions/knowledge/pipelines` 目录齐全
 - 项目根目录生成 `.state/`
 - 默认 pipeline 与 taste-review knowledge 已种子化
 
@@ -110,7 +110,7 @@ claude plugin update pensieve
 
 如果系统文件被你自己改乱了，最简单的重装方式是：
 
-1. 备份本地用户数据目录：`maxims/`、`decisions/`、`knowledge/`、`pipelines/`、`loop/`
+1. 备份本地用户数据目录：`maxims/`、`decisions/`、`knowledge/`、`pipelines/`
 2. 删除旧的 skill checkout
 3. 重新执行安装
 4. 跑 `init`
@@ -128,7 +128,6 @@ claude plugin update pensieve
 - `decisions/`
 - `knowledge/`
 - `pipelines/`
-- `loop/`
 - `.state/`（如果想保留体检报告、迁移备份、session marker）
 
 ## Claude 增量能力

@@ -5,7 +5,7 @@
 # - The skill root is the git checkout root and contains tracked system files plus ignored user data directories.
 # - Tracked system files live under .src/ and agents/.
 # - SKILL.md lives at the skill root too, but it is generated locally and ignored by git.
-# - User data lives beside them under maxims/decisions/knowledge/pipelines/loop and is ignored by git.
+# - User data lives beside them under maxims/decisions/knowledge/pipelines and is ignored by git.
 # - Hidden runtime state lives under <project-root>/.state.
 
 to_posix_path() {
@@ -39,7 +39,7 @@ skill_root_from_script() {
     dir="$(cd "$script_dir" && pwd)"
 
     while [[ "$dir" != "/" ]]; do
-        if [[ -f "$dir/SKILL.md" && -d "$dir/.src" ]]; then
+        if [[ -f "$dir/.src/manifest.json" ]]; then
             echo "$dir"
             return 0
         fi
@@ -220,7 +220,7 @@ project_graph_file() {
 ensure_user_data_root() {
     local dr
     dr="$(user_data_root "${1:-$(pwd)}")"
-    mkdir -p "$dr"/{maxims,decisions,knowledge,pipelines,loop}
+    mkdir -p "$dr"/{maxims,decisions,knowledge,pipelines}
     echo "$dr"
 }
 

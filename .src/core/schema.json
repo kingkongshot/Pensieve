@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "required_dirs": ["maxims", "decisions", "knowledge", "pipelines", "loop"],
+  "required_dirs": ["maxims", "decisions", "knowledge", "pipelines"],
   "critical_files": [
     {
       "target": "pipelines/run-when-reviewing-code.md",

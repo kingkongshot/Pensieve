@@ -246,7 +246,7 @@ def iter_category_files(base: Path, category: str):
     cat_dir = base / category
     if not cat_dir.is_dir():
         return
-    if category in {"knowledge", "loop"}:
+    if category in {"knowledge"}:
         for p in sorted(cat_dir.rglob("*")):
             if p.is_file() and not is_readme(p.name):
                 yield p, p.relative_to(cat_dir)
