@@ -36,26 +36,16 @@ to_posix_path() {
   echo "$raw_path"
 }
 
-PLUGIN_ROOT_RAW="${CLAUDE_PLUGIN_ROOT:-}"
-if [[ -z "$PLUGIN_ROOT_RAW" ]]; then
-  SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  PLUGIN_ROOT_RAW="$(cd "$SELF_DIR/.." && pwd)"
-fi
-
-PLUGIN_ROOT="$(to_posix_path "$PLUGIN_ROOT_RAW")"
 PROJECT_ROOT="$(to_posix_path "${PENSIEVE_PROJECT_ROOT:-${CLAUDE_PROJECT_DIR:-$(pwd)}}")"
-SKILL_ROOT="$PLUGIN_ROOT/skills/pensieve"
-DATA_ROOT="$(to_posix_path "${PENSIEVE_DATA_ROOT:-$PROJECT_ROOT/.claude/skills/pensieve}")"
+SKILL_ROOT="$(to_posix_path "${PENSIEVE_SKILL_ROOT:-$PROJECT_ROOT/.claude/skills/pensieve}")"
 TARGET="$SKILL_ROOT/.src/scripts/$SCRIPT_NAME"
 
-export PENSIEVE_INSTALL_MODE="claude-plugin"
-export PENSIEVE_PLUGIN_NAME="${PENSIEVE_PLUGIN_NAME:-pensieve}"
 export PENSIEVE_PROJECT_ROOT="$PROJECT_ROOT"
-export PENSIEVE_DATA_ROOT="$DATA_ROOT"
 export PENSIEVE_SKILL_ROOT="$SKILL_ROOT"
 
 [[ -f "$TARGET" ]] || {
   echo "Hook target not found: $TARGET" >&2
+  echo "Hint: install the skill first with npx skills add" >&2
   exit 1
 }
 

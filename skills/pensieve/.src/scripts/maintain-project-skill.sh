@@ -95,9 +95,7 @@ PYTHON_BIN="$(python_bin || true)"
 [[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
 TODAY_UTC="$(date -u +"%Y-%m-%d")"
 
-SYSTEM_SKILL_ROOT="$SKILL_ROOT"
-
-"$PYTHON_BIN" - "$SKILL_FILE" "$TMP_GRAPH_FILE" "$EVENT" "$TODAY_UTC" "$PROJECT_ROOT" "$USER_DATA_ROOT" "$STATE_ROOT" "$NOTE" "$SYSTEM_SKILL_ROOT" <<'PY'
+"$PYTHON_BIN" - "$SKILL_FILE" "$TMP_GRAPH_FILE" "$EVENT" "$TODAY_UTC" "$PROJECT_ROOT" "$USER_DATA_ROOT" "$STATE_ROOT" "$NOTE" <<'PY'
 from __future__ import annotations
 
 import re
@@ -112,7 +110,6 @@ project_root = sys.argv[5].strip()
 user_data_root = sys.argv[6].strip()
 state_root = sys.argv[7].strip()
 note = (sys.argv[8] or "").strip().replace("\n", " ")
-system_skill_root = Path(sys.argv[9]) if len(sys.argv) > 9 else None
 
 
 def event_display_name(raw: str) -> str:
@@ -142,9 +139,8 @@ TOOLS = [
 
 def read_tool_description(tool_dir: str) -> str:
     """Read description from a tool file's YAML frontmatter."""
-    if system_skill_root is None:
-        return "(description not available)"
-    tool_file = system_skill_root / ".src" / "tools" / f"{tool_dir}.md"
+    user_data_path = Path(user_data_root)
+    tool_file = user_data_path / ".src" / "tools" / f"{tool_dir}.md"
     if not tool_file.exists():
         return "(description not available)"
     text = tool_file.read_text(encoding="utf-8", errors="replace")
@@ -245,15 +241,14 @@ description: 项目知识库与工作流路由。knowledge 里有之前探索过
 
 ## Project Paths
 - Project Root: `{project_root}`
-- User Data Root: `{user_data_root}`
-- System Skill Root: `{system_skill_root}`
-- Hidden System Files: `{system_skill_root}/.src/`
-- Hidden Runtime State: `{state_root}/`
-- Maxims: `{user_data_root}/maxims/`
-- Decisions: `{user_data_root}/decisions/`
-- Knowledge: `{user_data_root}/knowledge/`
-- Pipelines: `{user_data_root}/pipelines/`
-- Loop: `{user_data_root}/loop/`
+- Skill Root: `{user_data_root}`
+- System Files: `.src/`
+- Runtime State: `{state_root}/`
+- Maxims: `maxims/`
+- Decisions: `decisions/`
+- Knowledge: `knowledge/`
+- Pipelines: `pipelines/`
+- Loop: `loop/`
 
 ## Graph
 

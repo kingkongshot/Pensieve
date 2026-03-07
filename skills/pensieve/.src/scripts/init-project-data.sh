@@ -1,8 +1,8 @@
 #!/bin/bash
 # 初始化当前 pensieve 用户数据根目录。
 #
-# `.src/` 是系统文件；通用 skill 模式下用户数据根默认与系统 skill 根一致，
-# Claude plugin 模式下则写入 <project>/.claude/skills/pensieve。
+# `.src/` 是系统文件，用户数据（maxims/decisions/knowledge/pipelines/loop）
+# 与 `.src/` 同级，均位于 skill 根目录下。
 #
 # 可重复执行（幂等）。
 
