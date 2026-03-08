@@ -317,7 +317,7 @@ for p in files:
                         "SHOULD_FIX",
                         "FM-402",
                         rel,
-                        “Exploration Reduction section missing 'What to ask less' entry”,
+                        "Exploration Reduction section missing 'What to ask less' entry",
                     )
                 )
             if "下次可以少查什么" not in body and "What to look up less" not in body:
@@ -326,7 +326,7 @@ for p in files:
                         "SHOULD_FIX",
                         "FM-403",
                         rel,
-                        “Exploration Reduction section missing 'What to look up less' entry”,
+                        "Exploration Reduction section missing 'What to look up less' entry",
                     )
                 )
             if "失效条件" not in body and "Invalidation condition" not in body:
@@ -335,7 +335,7 @@ for p in files:
                         "SHOULD_FIX",
                         "FM-404",
                         rel,
-                        “Exploration Reduction section missing 'Invalidation condition' entry”,
+                        "Exploration Reduction section missing 'Invalidation condition' entry",
                     )
                 )
 
