@@ -8,12 +8,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
-PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
-[[ -n "$PYTHON_BIN" ]] || exit 0
-
-# Read hook payload from stdin
+# Read hook payload from stdin first — fast-path exit for non-Explore/Plan agents
+# to avoid unnecessary file I/O and Python startup under parallel agent creation.
 STDIN_DATA="$(cat)"
 [[ -n "$STDIN_DATA" ]] || exit 0
+
+# Lightweight bash-level check: skip Python entirely for non-matching agent types.
+# This prevents hook timeout errors when 4+ agents are created in parallel.
+if [[ "$STDIN_DATA" != *'"subagent_type"'*'"Explore"'* ]] && \
+   [[ "$STDIN_DATA" != *'"subagent_type"'*'"Plan"'* ]]; then
+  exit 0
+fi
+
+PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
+[[ -n "$PYTHON_BIN" ]] || exit 0
 
 SKILL_FILE="$(skill_md_file "$SCRIPT_DIR")"
 STATE_FILE="$(project_state_file)"
