@@ -25,11 +25,19 @@
 
 前置条件：`git`、`bash`、`Python 3.8+`。
 
+> **多客户端说明**：下文以 Claude Code 路径 `~/.claude/skills/pensieve` 为例。其他客户端请替换为对应路径：
+> | 客户端 | 安装路径 |
+> |--------|----------|
+> | Claude Code | `~/.claude/skills/pensieve` |
+> | Cursor | `.cursor/skills/pensieve` |
+> | 通用 Agent | `.agents/skills/pensieve` |
+
 ```bash
 # 1. 全局安装系统代码（只需一次，所有项目共享）
 git clone -b zh https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
 
-# 2. 安装全局 hooks（只需一次）
+# 2. 安装全局 hooks（仅 Claude Code，只需一次）
+#    其他客户端跳过此步——hooks 是 Claude Code 专属功能
 bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
 
 # 3. 在你的项目中初始化用户数据
@@ -57,6 +65,7 @@ else
     else
         git clone -b zh https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
     fi
+    # hooks 是 Claude Code 专属功能，其他客户端跳过此步
     bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
 fi
 ```
@@ -136,7 +145,8 @@ if [[ ! -d ~/.claude/skills/pensieve ]]; then
     fi
 fi
 
-# 2. 安装全局 hooks
+# 2. 安装全局 hooks（仅 Claude Code）
+#    其他客户端跳过此步——hooks 是 Claude Code 专属功能
 bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
 
 # 3. 在每个项目中执行迁移
@@ -163,7 +173,7 @@ claude plugin uninstall pensieve 2>/dev/null || true
      └── maxim / decision / knowledge / pipeline
 ```
 
-- **提交时**：PostToolUse hook 自动触发经验提取
+- **提交时**：PostToolUse hook 自动触发经验提取（Claude Code 专属，其他客户端需手动触发 `self-improve`）
 - **审查时**：按项目 pipeline 执行，结论回流为 knowledge
 - **复盘时**：主动要求沉淀，洞察写入对应层
 
