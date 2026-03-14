@@ -60,7 +60,7 @@ if [[ "$FILE_PATH" != /* && -n "$CWD" ]]; then
     FILE_PATH="$CWD/$FILE_PATH"
 fi
 
-USER_DATA_ROOT="$(user_data_root "$SCRIPT_DIR")"
+USER_DATA_ROOT="$(user_data_root)"
 
 if [[ "$FILE_PATH" != "$USER_DATA_ROOT" && "$FILE_PATH" != "$USER_DATA_ROOT/"* ]]; then
     exit 0
@@ -76,9 +76,9 @@ case "$REL_PATH" in
 esac
 
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
-MAINTAIN_SCRIPT="$SKILL_ROOT/.src/scripts/maintain-project-skill.sh"
+MAINTAIN_SCRIPT="$SKILL_ROOT/.src/scripts/maintain-project-state.sh"
 
-[[ -x "$MAINTAIN_SCRIPT" ]] || exit 0
+[[ -f "$MAINTAIN_SCRIPT" ]] || exit 0
 
 NOTE="posttooluse ${TOOL_NAME:-unknown}: ${REL_PATH}"
 bash "$MAINTAIN_SCRIPT" --event sync --note "$NOTE" >/dev/null 2>&1 || true

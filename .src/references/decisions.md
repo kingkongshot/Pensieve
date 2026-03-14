@@ -22,7 +22,7 @@
 正式文件命名：
 
 ```text
-<skill-root>/decisions/{date}-{statement}.md
+<project>/.pensieve/decisions/{date}-{statement}.md
 ```
 
 ## 强制要求

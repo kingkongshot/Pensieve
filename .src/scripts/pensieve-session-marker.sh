@@ -56,8 +56,17 @@ PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
 [[ -n "$PYTHON_BIN" ]] || exit 0
 
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
-PROJECT_ROOT="$(to_posix_path "$(project_root "$SCRIPT_DIR")")"
-STATE_ROOT="$(to_posix_path "$(state_root "$SCRIPT_DIR")")"
+PROJECT_ROOT="$(project_root)" || exit 0
+PROJECT_ROOT="$(to_posix_path "$PROJECT_ROOT")"
+
+# Graceful degradation: silently exit for projects without .pensieve/.
+# This ensures zero impact on projects that do not use Pensieve (architecture-v2 §5.3).
+# The record mode is exempt because init calls it to create the initial marker.
+if [[ "$MODE" == "session-start" && ! -d "$PROJECT_ROOT/.pensieve" ]]; then
+  exit 0
+fi
+STATE_ROOT="$(state_root)" || exit 0
+STATE_ROOT="$(to_posix_path "$STATE_ROOT")"
 SKILL_VERSION="$(skill_version "$SCRIPT_DIR")"
 MARKER_FILE="$STATE_ROOT/pensieve-session-marker.json"
 NOW_UTC="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -140,15 +149,9 @@ def ensure_state_gitignore(state_dir: Path) -> None:
     ignore_file = state_dir / ".gitignore"
     existing = ignore_file.read_text(encoding="utf-8") if ignore_file.exists() else ""
     lines = existing.splitlines()
-    changed = False
-    if "*" not in lines:
-        lines.append("*")
-        changed = True
-    if "!.gitignore" not in lines:
-        lines.append("!.gitignore")
-        changed = True
-    if ignore_file.exists() and not changed:
+    if "*" in lines:
         return
+    lines.append("*")
     payload = "\n".join(lines).rstrip() + "\n"
     with tempfile.NamedTemporaryFile(
         mode="w",

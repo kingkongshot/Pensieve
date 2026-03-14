@@ -1,9 +1,10 @@
 #!/bin/bash
-# Migrate runner (structure-only):
-# 1) Migrate legacy user-data paths into the current user data root
-# 2) Align critical seed files
-# 3) Cleanup legacy graph/readme residues
-# 4) Tell user to run doctor manually
+# Migrate runner:
+# 1) Migrate legacy v1 user-data paths into the current user data root
+# 2) Align critical seed files (backup + compare + replace)
+# 3) Cleanup legacy graph/readme/state residues
+# 4) Ensure .pensieve/.gitignore
+# 5) Tell user to run doctor manually
 
 set -euo pipefail
 
@@ -17,7 +18,7 @@ Usage:
 
 Options:
   --root <path>             Target user data root. Default: current user data root
-  --state-dir <path>        Runtime state dir. Default: <project>/.state
+  --state-dir <path>        Runtime state dir. Default: <project>/.pensieve/.state
   --report <path>           Migrate markdown report. Default: <state-dir>/pensieve-migrate-report.md
   --summary-json <path>     Migrate summary json. Default: <state-dir>/pensieve-migrate-summary.json
   --backup-dir <path>       Backup dir for replaced files. Default: <state-dir>/migrate-backups/<timestamp>
@@ -76,14 +77,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PROJECT_ROOT="$(to_posix_path "$(project_root "$SCRIPT_DIR")")"
+PROJECT_ROOT="$(project_root)" || exit 1
+PROJECT_ROOT="$(to_posix_path "$PROJECT_ROOT")"
+validate_project_root "$PROJECT_ROOT"
 if [[ -z "$ROOT" ]]; then
-  ROOT="$(user_data_root "$SCRIPT_DIR")"
+  ROOT="$(user_data_root)"
 fi
 ROOT="$(to_posix_path "$ROOT")"
 
 if [[ -z "$STATE_DIR" ]]; then
-  STATE_DIR="$(state_root "$SCRIPT_DIR")"
+  STATE_DIR="$(state_root)"
 fi
 STATE_DIR="$(to_posix_path "$STATE_DIR")"
 if [[ "$STATE_DIR" != /* ]]; then
@@ -91,18 +94,7 @@ if [[ "$STATE_DIR" != /* ]]; then
 fi
 
 resolve_path() {
-  local maybe_path="$1"
-  local default_path="$2"
-  local out
-  out="$maybe_path"
-  if [[ -z "$out" ]]; then
-    out="$default_path"
-  fi
-  out="$(to_posix_path "$out")"
-  if [[ "$out" != /* ]]; then
-    out="$PROJECT_ROOT/$out"
-  fi
-  printf '%s\n' "$out"
+  resolve_output_path "$1" "$2" "$PROJECT_ROOT"
 }
 
 REPORT="$(resolve_path "$REPORT" "$STATE_DIR/pensieve-migrate-report.md")"
@@ -121,7 +113,7 @@ mkdir -p "$(dirname "$REPORT")" "$(dirname "$SUMMARY_JSON")"
 
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
 SCHEMA_FILE="$SKILL_ROOT/.src/core/schema.json"
-MAINTAIN_SCRIPT="$SCRIPT_DIR/maintain-project-skill.sh"
+MAINTAIN_SCRIPT="$SCRIPT_DIR/maintain-project-state.sh"
 PYTHON_BIN="$(python_bin || true)"
 [[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
 
@@ -130,6 +122,7 @@ mkdir -p "$BACKUP_DIR"
 "$PYTHON_BIN" - "$ROOT" "$PROJECT_ROOT" "$SKILL_ROOT" "${HOME:-}" "$BACKUP_DIR" "$MIGRATION_SUMMARY" "$DRY_RUN" "$TIMESTAMP" "$SCHEMA_FILE" <<'PY'
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import shutil
@@ -145,6 +138,14 @@ summary_file = Path(sys.argv[6])
 dry_run = sys.argv[7] == "1"
 timestamp = sys.argv[8]
 schema_file = Path(sys.argv[9])
+
+# Load shared core module for normalize_critical_file_content.
+core_file = skill_root / ".src" / "core" / "pensieve_core.py"
+_spec = importlib.util.spec_from_file_location("pensieve_core", core_file)
+if _spec is None or _spec.loader is None:
+    raise SystemExit(f"failed to load core module: {core_file}")
+core_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(core_module)
 
 
 def read_schema(path: Path) -> dict:
@@ -164,7 +165,7 @@ legacy_project_paths = [project_root / p for p in legacy_paths_schema.get("proje
 legacy_user_paths = [home_dir / p for p in legacy_paths_schema.get("user", []) if isinstance(p, str)]
 legacy_paths = legacy_project_paths + legacy_user_paths
 legacy_graph_patterns = [str(x) for x in schema.get("legacy_graph_patterns", [])]
-legacy_readme_re = re.compile(str(schema.get("legacy_readme_regex", r"(?i)^readme(?:.*\\.md)?$")))
+legacy_readme_re = re.compile(str(schema.get("legacy_readme_regex", r"(?i)^readme(?:.*\.md)?$")))
 
 critical_pairs = []
 for item in schema.get("critical_files", []):
@@ -186,6 +187,7 @@ summary = {
     "removed_legacy_paths": [],
     "removed_legacy_graph_files": [],
     "removed_legacy_readmes": [],
+    "migrated_legacy_state_dir": False,
     "warnings": [],
 }
 
@@ -270,9 +272,13 @@ def iter_category_files(base: Path, category: str):
         yield p, rel
 
 
+# --- Phase 1: Ensure target directory structure ---
+
 ensure_dir(root)
 for d in required_dirs:
     ensure_dir(root / d)
+
+# --- Phase 2: Migrate user data from legacy v1 paths ---
 
 for legacy in legacy_paths:
     if same_path(legacy, root) or same_path(legacy, skill_root):
@@ -284,6 +290,31 @@ for legacy in legacy_paths:
         for src_file, rel in iter_category_files(legacy, category) or []:
             dst = root / category / rel
             copy_with_conflict(src_file, dst)
+
+# --- Phase 3: Migrate legacy <project>/.state/ to <project>/.pensieve/.state/ ---
+
+legacy_state_dir = project_root / ".state"
+target_state_dir = root / ".state"
+if legacy_state_dir.is_dir() and not same_path(legacy_state_dir, target_state_dir):
+    if not target_state_dir.exists():
+        if not dry_run:
+            shutil.copytree(legacy_state_dir, target_state_dir)
+        summary["migrated_legacy_state_dir"] = True
+    else:
+        for item in sorted(legacy_state_dir.rglob("*")):
+            if not item.is_file():
+                continue
+            rel = item.relative_to(legacy_state_dir)
+            dst = target_state_dir / rel
+            if not dst.exists():
+                if not dry_run:
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(item, dst)
+        summary["migrated_legacy_state_dir"] = True
+    if not dry_run:
+        shutil.rmtree(legacy_state_dir, ignore_errors=True)
+
+# --- Phase 4: Cleanup legacy graph files and README copies ---
 
 for pattern in legacy_graph_patterns:
     for path in sorted(root.glob(pattern)):
@@ -303,6 +334,8 @@ for category in required_dirs:
             if not dry_run:
                 item.unlink(missing_ok=True)
 
+# --- Phase 5: Align critical seed files ---
+
 for target, template in critical_pairs:
     if not template.is_file():
         summary["warnings"].append(f"missing template: {template}")
@@ -317,13 +350,17 @@ for target, template in critical_pairs:
         continue
 
     current_text = target.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n")
-    if current_text == template_text:
+    current_normalized = core_module.normalize_critical_file_content(target.name, current_text)
+    template_normalized = core_module.normalize_critical_file_content(target.name, template_text)
+    if current_normalized == template_normalized:
         continue
 
     backup_path = backup_copy(target)
     summary["replaced_critical_files"].append({"file": str(target), "backup": str(backup_path)})
     if not dry_run:
         target.write_text(template_text, encoding="utf-8")
+
+# --- Phase 6: Remove legacy directories ---
 
 for legacy in legacy_paths:
     if same_path(legacy, root) or same_path(legacy, skill_root):
@@ -336,6 +373,17 @@ for legacy in legacy_paths:
             shutil.rmtree(legacy, ignore_errors=True)
         else:
             legacy.unlink(missing_ok=True)
+
+# --- Phase 7: Ensure .pensieve/.gitignore ---
+
+pensieve_gitignore = root / ".gitignore"
+if not pensieve_gitignore.exists():
+    if not dry_run:
+        pensieve_gitignore.write_text(
+            "# Runtime state (reports, markers, caches, graph snapshots)\n.state/\n",
+            encoding="utf-8",
+        )
+    summary["created_pensieve_gitignore"] = True
 
 summary_file.parent.mkdir(parents=True, exist_ok=True)
 summary_file.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -376,6 +424,7 @@ created_critical = actions.get("created_critical_files") or []
 removed_paths = actions.get("removed_legacy_paths") or []
 removed_graphs = actions.get("removed_legacy_graph_files") or []
 removed_readmes = actions.get("removed_legacy_readmes") or []
+migrated_state_dir = actions.get("migrated_legacy_state_dir", False)
 warnings = actions.get("warnings") or []
 
 status = "DONE" if not conflicts else "DONE_WITH_CONFLICTS"
@@ -410,21 +459,22 @@ lines = [
     f"- Dry-run: {'yes' if dry_run else 'no'}",
     f"- Data root: `{user_root}`",
     "",
-    "## 2) Migration & Cleanup Stats",
+    "## 2) Migration & Alignment Stats",
     f"- Directories created: {len(created_dirs)}",
-    f"- Files migrated: {len(migrated_files)}",
+    f"- Files migrated from legacy paths: {len(migrated_files)}",
     f"- Conflicts written(*.migrated.*): {len(conflicts)}",
     f"- Critical files replaced: {len(replaced)}",
     f"- Critical files created: {len(created_critical)}",
     f"- Legacy paths removed: {len(removed_paths)}",
     f"- Legacy graph files removed: {len(removed_graphs)}",
     f"- Legacy README copies removed: {len(removed_readmes)}",
+    f"- Legacy .state/ migrated: {'yes' if migrated_state_dir else 'no'}",
     f"- Backup dir: `{backup_dir}`",
     "",
     "## 3) Next Steps (manual)",
     "- Run doctor manually after migration:",
     "```bash",
-    "bash .src/scripts/run-doctor.sh --strict",
+    'bash "$PENSIEVE_SKILL_ROOT/.src/scripts/run-doctor.sh" --strict',
     "```",
     "",
     "## 4) Files",

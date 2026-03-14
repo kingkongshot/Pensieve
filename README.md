@@ -21,66 +21,135 @@
 | 三个月后忘了当初为什么这么设计 | decision 记录上下文和替代方案 |
 | 每次都要重新翻文档定位模块边界 | knowledge 缓存探索结果，直接复用 |
 
-## 从旧版本升级（< 1.0）
-
-1.0 重构了安装架构。如果你当前版本低于 1.0，**不要用 `git pull`**，需要完整卸载后重装。
-
-判断方法：如果你的 Pensieve 是通过 `claude plugin install` 安装的，或者找不到 `.claude/skills/pensieve/.src/manifest.json`，你就是旧版本。
-
-用户数据（`maxims/`、`decisions/`、`knowledge/`、`pipelines/`）会保留，其余全部清理：
-
-```bash
-# 1. 卸载 Claude 插件和缓存
-claude plugin uninstall pensieve 2>/dev/null
-rm -rf ~/.claude/plugins/cache/kingkongshot-marketplace/pensieve
-
-# 2. 清理 skill 目录（只保留用户数据）
-cd .claude/skills/pensieve
-rm -rf .src agents .git .gitignore SKILL.md LICENSE README.md .state .backup .obsidian temp resource
-
-# 3. 清理其他可能的旧 skill 路径
-rm -rf .agents/skills/pensieve
-
-# 4. 重新安装
-cd ../../..
-git clone -b zh https://github.com/kingkongshot/Pensieve.git /tmp/pensieve-new
-cp -r /tmp/pensieve-new/{.git,.gitignore,.src,agents,LICENSE,README.md} .claude/skills/pensieve/
-rm -rf /tmp/pensieve-new
-
-# 5. 初始化 + 体检
-bash .claude/skills/pensieve/.src/scripts/init-project-data.sh
-bash .claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
-```
-
 ## 安装
 
 前置条件：`git`、`bash`、`Python 3.8+`。
 
 ```bash
-# 1. 安装 skill
-git clone -b zh https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
+# 1. 全局安装系统代码（只需一次，所有项目共享）
+git clone -b zh https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
 
-# 2. 初始化（创建用户数据目录，种子化默认内容，生成 SKILL.md 路由文件）
-bash .claude/skills/pensieve/.src/scripts/init-project-data.sh
+# 2. 安装全局 hooks（只需一次）
+bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
 
-# 3. 安装 Claude hooks（Claude Code 用户必装，其他客户端跳过）
-claude plugin marketplace add kingkongshot/Pensieve#claude-plugin
-claude plugin install pensieve@kingkongshot-marketplace --scope project
+# 3. 在你的项目中初始化用户数据
+cd <your-project>
+bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
 ```
 
-Skill 和 hooks 的更新机制不同——skill 用 `git pull`，hooks 用 `claude plugin update`——所以它们放在两个分支里，各自独立升级，互不影响。
+系统代码全局唯一安装在 `~/.claude/skills/pensieve/`，用户数据按项目存储在 `<project>/.pensieve/`。十个项目共享同一份系统代码，各自维护独立的项目知识。
+
+### AI agent 自动安装参考
+
+当用户要求 AI agent 安装 Pensieve 时，agent 应按以下决策流程执行：
+
+**第一步：检查全局安装状态**
+
+```bash
+# 检查是否已安装
+if [[ -d ~/.claude/skills/pensieve/.src ]]; then
+    echo "Pensieve 已全局安装，跳过 clone"
+else
+    # 检查 ~/.claude 是否是 git 仓库（某些用户用 git 同步 ~/.claude 配置）
+    if git -C ~/.claude rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        # ~/.claude 是 git 仓库，使用 submodule 安装
+        git -C ~/.claude submodule add -b zh https://github.com/kingkongshot/Pensieve.git skills/pensieve
+    else
+        git clone -b zh https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
+    fi
+    bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
+fi
+```
+
+**第二步：判断是否执行项目初始化**
+
+```bash
+# 如果当前目录就是 ~/.claude，不要自动初始化项目数据
+# （除非用户明确说明把 ~/.claude 本身当作项目开发）
+CURRENT_DIR="$(pwd)"
+CLAUDE_DIR="$(cd ~/.claude 2>/dev/null && pwd)"
+if [[ "$CURRENT_DIR" == "$CLAUDE_DIR" ]]; then
+    echo "当前目录是 ~/.claude，跳过项目初始化。如需在此目录使用 Pensieve，请明确告知。"
+    exit 0
+fi
+```
+
+**第三步：检查旧版本数据并初始化**
+
+```bash
+# 检查当前项目是否有旧版本用户数据
+# 判定标准：legacy 目录下存在 maxims/decisions/knowledge/pipelines 子目录
+# 注意：在 ~/.claude 下，skills/pensieve 是 v2 安装位置，但如果其中包含
+# 用户数据子目录（maxims/ 等），说明是 v1 项目级安装残留，仍需迁移
+HAS_LEGACY=0
+for legacy_dir in .claude/skills/pensieve .agents/skills/pensieve skills/pensieve .claude/pensieve; do
+    if [[ -d "$legacy_dir" ]] && [[ -d "$legacy_dir/maxims" || -d "$legacy_dir/decisions" || -d "$legacy_dir/knowledge" || -d "$legacy_dir/pipelines" ]]; then
+        HAS_LEGACY=1
+        break
+    fi
+done
+
+if [[ "$HAS_LEGACY" -eq 1 ]]; then
+    # 发现旧版本数据——询问用户是否迁移
+    echo "检测到旧版本 Pensieve 用户数据，是否迁移到 v2？"
+    # 用户确认后执行：
+    bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
+    bash ~/.claude/skills/pensieve/.src/scripts/run-migrate.sh
+    bash ~/.claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
+elif [[ -d .pensieve ]]; then
+    echo "当前项目已初始化 Pensieve"
+else
+    bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
+fi
+```
+
+> **要点总结**：先检查全局安装 → 判断 `~/.claude` 是否 git 仓库决定 clone/submodule → 跳过 `~/.claude` 目录的项目初始化 → 检测旧数据决定 init/migrate。
 
 ## 更新
 
 ```bash
-cd .claude/skills/pensieve
-git pull --ff-only
-bash .src/scripts/run-doctor.sh --strict
+# 更新系统代码（一次操作，所有项目生效）
+cd ~/.claude/skills/pensieve
+git pull --ff-only || { git fetch origin && git reset --hard "origin/$(git rev-parse --abbrev-ref HEAD)"; }
+
+# 在项目中健康检查（可选但推荐）
+cd <your-project>
+bash ~/.claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
 ```
 
-`git pull` 只更新系统文件（`.src/`、`agents/`）。用户数据由 `.gitignore` 保护，不会被覆盖。**不要在更新前删除用户数据目录**——它们是你积累的项目记忆，删了就没了。
+`git pull --ff-only` 适用于正常更新。如果远程分支被 force push（如 squash 后重新发布），ff-only 会失败，此时 `fetch + reset` 会将本地同步到远程最新状态。这是安全的——skill 目录只包含 tracked 系统文件，用户数据在 `<project>/.pensieve/`，不会被覆盖。
 
 完整的安装、更新、重装、卸载说明见 [skill-lifecycle.md](.src/references/skill-lifecycle.md)。
+
+## 从旧版本升级
+
+如果你的 Pensieve 是项目级安装（代码在 `<project>/.claude/skills/pensieve/`），或通过 `claude plugin install` 安装，需要迁移到 v2 架构：
+
+```bash
+# 1. 全局安装系统代码（如果尚未安装）
+if [[ ! -d ~/.claude/skills/pensieve ]]; then
+    # 检查 ~/.claude 是否是 git 仓库
+    if git -C ~/.claude rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        git -C ~/.claude submodule add -b zh https://github.com/kingkongshot/Pensieve.git skills/pensieve
+    else
+        git clone -b zh https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
+    fi
+fi
+
+# 2. 安装全局 hooks
+bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
+
+# 3. 在每个项目中执行迁移
+cd <your-project>
+bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
+bash ~/.claude/skills/pensieve/.src/scripts/run-migrate.sh
+bash ~/.claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
+
+# 4. 卸载旧插件（如有）
+claude plugin uninstall pensieve 2>/dev/null || true
+```
+
+`run-migrate.sh` 会自动将用户数据（`maxims/`、`decisions/`、`knowledge/`、`pipelines/`）从旧路径移入 `<project>/.pensieve/`，运行时状态从 `<project>/.state/` 移入 `<project>/.pensieve/.state/`，清理旧 graph 文件和 README 副本，然后删除旧版本目录。
 
 ## 自增强循环
 
@@ -119,7 +188,7 @@ bash .src/scripts/run-doctor.sh --strict
 |---|---|---|
 | `init` | 创建数据目录，种子化默认内容 | "帮我初始化 pensieve" |
 | `upgrade` | 刷新 skill 源码 | "升级 pensieve" |
-| `migrate` | 清理旧路径，对齐种子文件 | "清理旧结构" |
+| `migrate` | 迁移旧版本数据，对齐种子文件 | "迁移到 v2" |
 | `doctor` | 只读扫描，检查结构和格式 | "检查数据有没有问题" |
 | `self-improve` | 从对话和 diff 中提取洞察，写入四层知识 | "把这次经验沉淀下来" |
 
@@ -131,24 +200,31 @@ bash .src/scripts/run-doctor.sh --strict
 ### 目录结构
 
 ```text
-<project>/
-├── .claude/skills/pensieve/   # git clone 的 skill 根目录
-│   ├── .src/                  # 系统文件（tracked）
-│   ├── agents/                # agent 配置（tracked）
-│   ├── SKILL.md               # 路由文件（init 生成，gitignored）
-│   ├── maxims/                # 用户数据（gitignored）
-│   ├── decisions/             # 用户数据（gitignored）
-│   ├── knowledge/             # 用户数据（gitignored）
-│   └── pipelines/             # 用户数据（gitignored）
-└── .state/                    # 运行时产物：报告、marker、图谱快照
+~/.claude/skills/pensieve/          # 用户级（全局唯一安装）
+├── SKILL.md                        #   静态路由文件（tracked）
+├── .src/                           #   系统代码、模板、参考文档、核心引擎
+│   ├── core/
+│   ├── scripts/
+│   ├── templates/
+│   ├── references/
+│   └── tools/
+└── agents/                         #   代理配置
+
+<project>/.pensieve/                # 项目级（每项目独立，可纳入版本控制）
+├── maxims/                         #   工程准则
+├── decisions/                      #   架构决策
+├── knowledge/                      #   缓存的探索结果
+├── pipelines/                      #   可复用工作流
+├── state.md                        #   动态：生命周期状态 + 知识图谱
+└── .state/                         #   运行时产物（gitignored）
 ```
 
 `.src/manifest.json` 是 skill 根目录的锚点——脚本通过它定位所有路径。
 
 ### 设计原则
 
-- **系统能力与用户数据分离** — 更新永远不覆盖你积累的项目知识
-- **规则单一来源** — 目录、关键文件、旧路径统一由 `.src/core/schema.json` 定义
+- **系统代码与用户数据物理隔离** — 系统代码在 `~/.claude/skills/pensieve/`，用户数据在 `<project>/.pensieve/`，`git pull` 更新系统不可能触碰项目数据
+- **规则单一来源** — 目录、关键文件、迁移路径统一由 `.src/core/schema.json` 定义
 - **先确认再执行** — 范围不明确时先问，不自动启动长流程
 - **先读规范再写数据** — 创建任何用户数据前先读 `.src/references/` 的格式规范
 

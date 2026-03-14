@@ -29,9 +29,9 @@ gate: auto
 
 沉淀的价值在于下次能复用，没有证据支撑的猜测反而会误导后续决策。
 
-- 只沉淀”可复用且有证据”的洞察；无法验证的猜测不落库。
+- 只沉淀"可复用且有证据"的洞察；无法验证的猜测不落库。
 - 分类遵守语义分层：IS → `knowledge`，WANT → `decision`，MUST → `maxim`。
-- 用语义而非”knowledge 优先”来分配，因为错误分类会导致约束力度不匹配（本该是 MUST 的写成了 knowledge，后续容易被忽略）。
+- 用语义而非"knowledge 优先"来分配，因为错误分类会导致约束力度不匹配（本该是 MUST 的写成了 knowledge，后续容易被忽略）。
 
 ---
 
@@ -80,15 +80,15 @@ gate: auto
    - 探索型 `knowledge`：包含（状态转换 / 症状→根因→定位 / 边界与所有权 / 反模式 / 验证信号）
    - `pipeline`：需满足条件（重复出现 + 不可交换 + 可验证）
 6. 写入目标路径，补关联链接
-7. 刷新 Pensieve 生成型 `SKILL.md`：
+7. 刷新 Pensieve 项目状态：
    ```
-   bash .src/scripts/maintain-project-skill.sh --event self-improve --note "auto-improve: {files}"
+   bash "$PENSIEVE_SKILL_ROOT/.src/scripts/maintain-project-state.sh" --event self-improve --note "auto-improve: {files}"
    ```
 8. 输出简短摘要（写入路径 + 沉淀类型）
 
 **DO NOT**：不询问用户确认，不展示草稿等待批准，直接写入
 
-**完成标准**：洞察已写入用户数据（或明确无需沉淀），根目录 `SKILL.md` 与 `.state/pensieve-user-data-graph.md` 已刷新
+**完成标准**：洞察已写入用户数据（或明确无需沉淀），`state.md` 与 `.state/pensieve-user-data-graph.md` 已刷新
 
 ---
 
@@ -114,6 +114,6 @@ gate: auto
 
 ## 失败回退
 
-1. `git diff --cached` 为空：跳过 Task 2/Task 3，输出“无 staged 变更，不提交”。
-2. 沉淀步骤失败：记录阻塞原因并跳过沉淀，继续 Task 3；结尾追加“建议运行 `doctor`”。
-3. 生成型 `SKILL.md` 维护失败：保留已沉淀内容，报告失败命令与重试建议，不回滚已写入文件。
+1. `git diff --cached` 为空：跳过 Task 2/Task 3，输出"无 staged 变更，不提交"。
+2. 沉淀步骤失败：记录阻塞原因并跳过沉淀，继续 Task 3；结尾追加"建议运行 `doctor`"。
+3. `state.md` 维护失败：保留已沉淀内容，报告失败命令与重试建议，不回滚已写入文件。
