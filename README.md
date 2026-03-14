@@ -29,8 +29,8 @@
 > | 客户端 | 安装路径 |
 > |--------|----------|
 > | Claude Code | `~/.claude/skills/pensieve` |
-> | Cursor | `.cursor/skills/pensieve` |
-> | 通用 Agent | `.agents/skills/pensieve` |
+> | Cursor | `~/.cursor/skills/pensieve` |
+> | 通用 Agent | `~/.agents/skills/pensieve` |
 
 ```bash
 # 1. 全局安装系统代码（只需一次，所有项目共享）
@@ -173,7 +173,7 @@ claude plugin uninstall pensieve 2>/dev/null || true
      └── maxim / decision / knowledge / pipeline
 ```
 
-- **提交时**：PostToolUse hook 自动触发经验提取（Claude Code 专属，其他客户端需手动触发 `self-improve`）
+- **编辑时**：PostToolUse hook 在 Write/Edit 后自动同步 state.md 知识图谱（Claude Code 专属，其他客户端需手动触发 `self-improve`）
 - **审查时**：按项目 pipeline 执行，结论回流为 knowledge
 - **复盘时**：主动要求沉淀，洞察写入对应层
 
