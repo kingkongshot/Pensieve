@@ -385,6 +385,76 @@ if not pensieve_gitignore.exists():
         )
     summary["created_pensieve_gitignore"] = True
 
+# --- Phase 8: Clean up legacy plugin entries from project .claude/settings.json ---
+
+project_settings = project_root / ".claude" / "settings.json"
+summary["cleaned_project_settings"] = False
+if project_settings.is_file():
+    try:
+        ps_data = json.loads(project_settings.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        ps_data = None
+
+    if isinstance(ps_data, dict):
+        ps_changed = False
+
+        # Remove Pensieve hook entries
+        ps_hooks = ps_data.get("hooks")
+        if isinstance(ps_hooks, dict):
+            for event_name, entries in list(ps_hooks.items()):
+                if not isinstance(entries, list):
+                    continue
+                filtered = []
+                for entry in entries:
+                    if not isinstance(entry, dict):
+                        filtered.append(entry)
+                        continue
+                    is_pensieve = False
+                    for h in entry.get("hooks", []):
+                        cmd = str(h.get("command", ""))
+                        if "pensieve" in cmd or "explore-prehook" in cmd or "sync-project-skill-graph" in cmd:
+                            is_pensieve = True
+                            break
+                    if not is_pensieve:
+                        filtered.append(entry)
+                if len(filtered) != len(entries):
+                    ps_changed = True
+                    if filtered:
+                        ps_hooks[event_name] = filtered
+                    else:
+                        del ps_hooks[event_name]
+            if not ps_hooks:
+                del ps_data["hooks"]
+
+        # Remove Pensieve marketplace entries
+        ps_markets = ps_data.get("extraKnownMarketplaces")
+        if isinstance(ps_markets, dict):
+            legacy_keys = [
+                k for k, v in ps_markets.items()
+                if isinstance(v, dict) and "Pensieve" in json.dumps(v)
+            ]
+            for k in legacy_keys:
+                del ps_markets[k]
+            if legacy_keys:
+                ps_changed = True
+                if not ps_markets:
+                    del ps_data["extraKnownMarketplaces"]
+
+        if ps_changed:
+            summary["cleaned_project_settings"] = True
+            if not dry_run:
+                # Backup before modifying
+                ps_bak = backup_dir / ".claude" / "settings.json"
+                ps_bak.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(project_settings, ps_bak)
+                if ps_data:
+                    project_settings.write_text(
+                        json.dumps(ps_data, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                else:
+                    project_settings.unlink(missing_ok=True)
+
 summary_file.parent.mkdir(parents=True, exist_ok=True)
 summary_file.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
@@ -426,6 +496,7 @@ removed_graphs = actions.get("removed_legacy_graph_files") or []
 removed_readmes = actions.get("removed_legacy_readmes") or []
 migrated_state_dir = actions.get("migrated_legacy_state_dir", False)
 warnings = actions.get("warnings") or []
+cleaned_project_settings = actions.get("cleaned_project_settings", False)
 
 status = "DONE" if not conflicts else "DONE_WITH_CONFLICTS"
 
@@ -469,6 +540,7 @@ lines = [
     f"- Legacy graph files removed: {len(removed_graphs)}",
     f"- Legacy README copies removed: {len(removed_readmes)}",
     f"- Legacy .state/ migrated: {'yes' if migrated_state_dir else 'no'}",
+    f"- Project .claude/settings.json cleaned: {'yes' if cleaned_project_settings else 'no'}",
     f"- Backup dir: `{backup_dir}`",
     "",
     "## 3) Next Steps (manual)",
