@@ -19,7 +19,7 @@
     }
   ],
   "legacy_paths": {
-    "project": ["skills/pensieve", ".claude/pensieve"],
+    "project": [".claude/skills/pensieve", ".agents/skills/pensieve", "skills/pensieve", ".claude/pensieve"],
     "user": [".claude/pensieve"]
   },
   "legacy_graph_patterns": ["_pensieve-graph*.md", "pensieve-graph*.md", "graph*.md"],
@@ -35,63 +35,10 @@
         "missing_root",
         "missing_directory",
         "deprecated_path",
-        "legacy_graph_file",
-        "legacy_spec_readme_copy",
         "missing_critical_file",
-        "critical_file_drift",
-        "review_pipeline_path_drift"
+        "critical_file_drift"
       ],
       "upgrade_categories": []
-    }
-  },
-  "findings": {
-    "STR-001": {
-      "message": "User data root directory does not exist.",
-      "recommendation": "Install or restore the pensieve skill first, then run init."
-    },
-    "STR-002": {
-      "message": "Missing required directory: {dir}/",
-      "recommendation": "Run init or migrate to restore the directory structure, then re-run doctor."
-    },
-    "STR-003": {
-      "message": "SKILL.md routing file does not exist.",
-      "recommendation": "Run init to generate SKILL.md."
-    },
-    "STR-101": {
-      "message": "Legacy path remnant found, coexisting with the current user data root.",
-      "recommendation": "Run migrate to clean up legacy paths and converge to the current user data root."
-    },
-    "STR-111": {
-      "message": "Legacy standalone graph file found.",
-      "recommendation": "Run migrate to remove standalone graph files; the canonical graph is written to the generated `SKILL.md#Graph`, `.state/` retains only runtime output."
-    },
-    "STR-121": {
-      "message": "Legacy README copy found in user data directory.",
-      "recommendation": "Run migrate to remove this copy; READMEs should only exist in the root or .src."
-    },
-    "STR-201": {
-      "message": "Missing critical seed file.",
-      "recommendation": "Run migrate to force-align critical files."
-    },
-    "STR-202": {
-      "message": "Critical file body content differs from template (context link value differences ignored).",
-      "recommendation": "Run migrate to back up and replace, restoring critical workflow file body alignment with the template."
-    },
-    "STR-301": {
-      "message": "Review pipeline still references legacy skill paths or hidden template paths.",
-      "recommendation": "Run migrate, or manually update references to use knowledge/... paths under the current user data root."
-    },
-    "STR-501": {
-      "message": "Claude Code auto memory entry MEMORY.md is missing.",
-      "recommendation": "Run init/migrate/doctor to trigger auto memory creation, or manually add the Pensieve guidance block to ~/.claude/projects/<project>/memory/MEMORY.md."
-    },
-    "STR-502": {
-      "message": "MEMORY.md is missing the Pensieve description, or its content is not aligned with the skill description.",
-      "recommendation": "Run init/migrate/doctor to trigger auto memory alignment, ensuring MEMORY.md matches the SKILL.md description and includes the pensieve skill guidance."
-    },
-    "STR-901": {
-      "message": "Template required for scanning is missing, cannot complete verification: {detail}",
-      "recommendation": "Fix the skill installation or update to a complete version, then retry."
     }
   }
 }

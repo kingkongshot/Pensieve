@@ -27,7 +27,7 @@ tags: [pensieve, knowledge, spec]
 ## 存储位置
 
 ```text
-<skill-root>/knowledge/{name}/
+<project>/.pensieve/knowledge/{name}/
 ├── content.md
 └── source/        # 可选
 ```

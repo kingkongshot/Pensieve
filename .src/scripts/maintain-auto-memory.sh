@@ -37,15 +37,18 @@ USAGE
 done
 
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
-MEMORY_FILE="$(auto_memory_file "$SCRIPT_DIR")"
+MEMORY_FILE="$(auto_memory_file)"
 SYSTEM_SKILL_FILE="$SKILL_ROOT/SKILL.md"
+SCHEMA_FILE="$SKILL_ROOT/.src/core/schema.json"
 
 PYTHON_BIN="$(python_bin || true)"
 [[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
 
-"$PYTHON_BIN" - "$MEMORY_FILE" "$SYSTEM_SKILL_FILE" "$EVENT" <<'PY'
+"$PYTHON_BIN" - "$MEMORY_FILE" "$SYSTEM_SKILL_FILE" "$EVENT" "$SCHEMA_FILE" "$SKILL_ROOT" <<'PY'
 from __future__ import annotations
 
+import importlib.util
+import json
 import re
 import sys
 from pathlib import Path
@@ -53,27 +56,35 @@ from pathlib import Path
 memory_file = Path(sys.argv[1])
 system_skill_file = Path(sys.argv[2])
 event = (sys.argv[3] or "").strip()
+schema_file = Path(sys.argv[4])
+skill_root = Path(sys.argv[5])
 
-start_marker = "<!-- pensieve:auto-memory:start -->"
-end_marker = "<!-- pensieve:auto-memory:end -->"
-guidance_line = "- Guidance: When a request involves knowledge retention, structural checks, version migration, or complex task decomposition, prefer invoking the `pensieve` skill."
+# Load shared core module.
+core_file = skill_root / ".src" / "core" / "pensieve_core.py"
+_spec = importlib.util.spec_from_file_location("pensieve_core", core_file)
+if _spec is None or _spec.loader is None:
+    raise SystemExit(f"failed to load core module: {core_file}")
+core_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(core_module)
 
+# Read marker/guidance config from schema.json (single source of truth).
+_FALLBACK_START = "<!-- pensieve:auto-memory:start -->"
+_FALLBACK_END = "<!-- pensieve:auto-memory:end -->"
+_FALLBACK_GUIDANCE = "- Guidance: When a request involves knowledge retention, structural checks, version migration, or complex task decomposition, prefer invoking the `pensieve` skill."
 
-def load_skill_description(path: Path) -> str:
-    if not path.exists():
-        raise SystemExit(f"Missing system skill file: {path}")
-    text = path.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n")
-    m = re.search(r"^---\n(.*?)\n---\n?", text, flags=re.MULTILINE | re.DOTALL)
-    if not m:
-        raise SystemExit(f"Invalid frontmatter in system skill file: {path}")
-    frontmatter = m.group(1)
-    for line in frontmatter.splitlines():
-        if line.startswith("description:"):
-            value = line.split(":", 1)[1].strip()
-            if value:
-                return value
-            break
-    raise SystemExit(f"Missing 'description' in system skill frontmatter: {path}")
+try:
+    schema = json.loads(schema_file.read_text(encoding="utf-8", errors="replace"))
+    memory_cfg = schema.get("memory", {}) if isinstance(schema.get("memory"), dict) else {}
+except Exception:
+    memory_cfg = {}
+
+start_marker = str(memory_cfg.get("start_marker", _FALLBACK_START))
+end_marker = str(memory_cfg.get("end_marker", _FALLBACK_END))
+guidance_line = str(memory_cfg.get("guidance_line", _FALLBACK_GUIDANCE))
+
+description = core_module.load_skill_description(system_skill_file)
+if description is None:
+    raise SystemExit(f"Missing or invalid skill description in: {system_skill_file}")
 
 
 def build_block(description: str) -> str:
@@ -96,7 +107,6 @@ def upsert_block(existing: str, block: str) -> str:
     return updated
 
 
-description = load_skill_description(system_skill_file)
 block = build_block(description)
 
 if memory_file.exists():

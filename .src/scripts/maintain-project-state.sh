@@ -1,8 +1,8 @@
 #!/bin/bash
-# Maintain generated Pensieve SKILL.md and Claude auto memory guidance.
+# Maintain generated Pensieve project state.md and Claude auto memory guidance.
 #
 # Usage:
-#   maintain-project-skill.sh --event <install|upgrade|migrate|doctor|self-improve|sync> [--note "..."]
+#   maintain-project-state.sh --event <install|upgrade|migrate|doctor|self-improve|sync> [--note "..."]
 
 set -euo pipefail
 
@@ -27,7 +27,7 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       cat <<'USAGE'
 Usage:
-  maintain-project-skill.sh --event <install|upgrade|migrate|doctor|self-improve|sync> [--note "..."]
+  maintain-project-state.sh --event <install|upgrade|migrate|doctor|self-improve|sync> [--note "..."]
 
 Options:
   --event <name>   Lifecycle event to record
@@ -57,11 +57,13 @@ case "$EVENT" in
     ;;
 esac
 
-PROJECT_ROOT="$(to_posix_path "$(project_root "$SCRIPT_DIR")")"
-USER_DATA_ROOT="$(user_data_root "$SCRIPT_DIR")"
-STATE_ROOT="$(ensure_state_dir "$(state_root "$SCRIPT_DIR")")"
-SKILL_FILE="$(project_skill_file "$SCRIPT_DIR")"
-GRAPH_FILE="$(project_graph_file "$SCRIPT_DIR")"
+PROJECT_ROOT="$(project_root)" || exit 1
+PROJECT_ROOT="$(to_posix_path "$PROJECT_ROOT")"
+validate_project_root "$PROJECT_ROOT"
+USER_DATA_ROOT="$(user_data_root)"
+STATE_ROOT="$(ensure_state_dir "$(state_root)")"
+STATE_FILE="$(project_state_file)"
+GRAPH_FILE="$(project_graph_file)"
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
 GRAPH_SCRIPT="$SKILL_ROOT/.src/scripts/generate-user-data-graph.sh"
 AUTO_MEMORY_SCRIPT="$SKILL_ROOT/.src/scripts/maintain-auto-memory.sh"
@@ -74,30 +76,17 @@ else
   printf '%s\n' "_(graph not generated yet)_" > "$GRAPH_FILE"
 fi
 
-# Remove legacy standalone graph files from the user data root.
-for legacy_graph in \
-  "$USER_DATA_ROOT"/_pensieve-graph.md \
-  "$USER_DATA_ROOT"/_pensieve-graph.*.md \
-  "$USER_DATA_ROOT"/pensieve-graph.md \
-  "$USER_DATA_ROOT"/pensieve-graph.*.md \
-  "$USER_DATA_ROOT"/graph.md \
-  "$USER_DATA_ROOT"/graph.*.md; do
-  [[ -e "$legacy_graph" ]] || continue
-  rm -f "$legacy_graph"
-done
-
 PYTHON_BIN="$(python_bin || true)"
 [[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
 TODAY_UTC="$(date -u +"%Y-%m-%d")"
 
-"$PYTHON_BIN" - "$SKILL_FILE" "$GRAPH_FILE" "$EVENT" "$TODAY_UTC" "$PROJECT_ROOT" "$USER_DATA_ROOT" "$STATE_ROOT" "$NOTE" <<'PY'
+"$PYTHON_BIN" - "$STATE_FILE" "$GRAPH_FILE" "$EVENT" "$TODAY_UTC" "$PROJECT_ROOT" "$USER_DATA_ROOT" "$STATE_ROOT" "$NOTE" <<'PY'
 from __future__ import annotations
 
-import re
 import sys
 from pathlib import Path
 
-skill_file = Path(sys.argv[1])
+state_file = Path(sys.argv[1])
 graph_file = Path(sys.argv[2])
 event = sys.argv[3].strip()
 today = sys.argv[4].strip()
@@ -122,45 +111,10 @@ def event_display_name(raw: str) -> str:
     return "self-improve"
 
 
-TOOLS = [
-    ("init", "Init"),
-    ("upgrade", "Upgrade"),
-    ("migrate", "Migrate"),
-    ("doctor", "Doctor"),
-    ("self-improve", "Self-Improve"),
-]
-
-
-def read_tool_description(tool_dir: str) -> str:
-    tool_file = Path(user_data_root) / ".src" / "tools" / f"{tool_dir}.md"
-    if not tool_file.exists():
-        return "(description not available)"
-    text = tool_file.read_text(encoding="utf-8", errors="replace")
-    m = re.match(r"^---\s*\n(.*?)\n---", text, flags=re.DOTALL)
-    if not m:
-        return "(no frontmatter)"
-    for line in m.group(1).split("\n"):
-        if line.startswith("description:"):
-            return line[len("description:") :].strip()
-    return "(no description field)"
-
-
-def build_routing_section() -> str:
-    lines = []
-    for tool_dir, display_name in TOOLS:
-        desc = read_tool_description(tool_dir)
-        lines.append(f"- {display_name}: {desc} Tool spec: `.src/tools/{tool_dir}.md`.")
-    lines.append("- Graph View: Read the `## Graph` section of this file.")
-    return "\n".join(lines)
-
-
-def load_graph() -> str:
+def load_graph_ref() -> str:
     if not graph_file.exists():
         return "_(graph not generated yet)_"
-    txt = graph_file.read_text(encoding="utf-8", errors="replace").strip()
-    if txt == "":
-        return "_(graph is empty)_"
-    return txt
+    return f"见 `.pensieve/.state/{graph_file.name}`（按需读取）"
 
 
 def replace_section(lines: list[str], header: str, new_body: list[str]) -> list[str]:
@@ -178,11 +132,11 @@ def replace_section(lines: list[str], header: str, new_body: list[str]) -> list[
 
 
 event_name = event_display_name(event)
-graph_markdown = load_graph()
+graph_markdown = load_graph_ref()
 last_note = note if note else "(none)"
 
-if skill_file.exists():
-    text = skill_file.read_text(encoding="utf-8", errors="replace")
+if state_file.exists():
+    text = state_file.read_text(encoding="utf-8", errors="replace")
     lines = text.split("\n")
 
     lines = replace_section(
@@ -197,6 +151,17 @@ if skill_file.exists():
 
     lines = replace_section(
         lines,
+        "## Project Paths",
+        [
+            f"- Project Root: `{project_root}`",
+            f"- User Data: `.pensieve/`",
+            f"- Runtime State: `.pensieve/.state/`",
+            "",
+        ],
+    )
+
+    lines = replace_section(
+        lines,
         "## Graph",
         [
             "",
@@ -205,44 +170,29 @@ if skill_file.exists():
         ],
     )
 
-    skill_file.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    state_file.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 else:
-    content = f"""---
-name: pensieve
-description: Project knowledge base and workflow router. knowledge/ caches previously explored file locations, module boundaries, and call chains for direct reuse; decisions/maxims are established architectural decisions and coding standards to follow, not re-debate; pipelines are reusable workflows. Use self-improve to capture new insights after completing tasks. Provides init, upgrade, migrate, doctor, self-improve — five tools.
----
-
-# Pensieve
-
-Route user requests to the correct tool. Confirm when uncertain.
+    content = f"""# Pensieve Project State
 
 ## Lifecycle State
 - Last Event: {event_name}
 - Last Note: {last_note}
 
-## Routing
-{build_routing_section()}
-
 ## Project Paths
 - Project Root: `{project_root}`
-- Skill Root: `{user_data_root}`
-- System Files: `.src/`, `agents/`
-- Generated Route File: `SKILL.md`
-- Runtime State: `{state_root}/`
-- Maxims: `maxims/`
-- Decisions: `decisions/`
-- Knowledge: `knowledge/`
-- Pipelines: `pipelines/`
+- User Data: `.pensieve/`
+- Runtime State: `.pensieve/.state/`
 
 ## Graph
 
 {graph_markdown}
 """
-    skill_file.write_text(content.rstrip() + "\n", encoding="utf-8")
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    state_file.write_text(content.rstrip() + "\n", encoding="utf-8")
 PY
 
-echo "✅ Pensieve project SKILL updated"
-echo "  - skill: $SKILL_FILE"
+echo "✅ Pensieve project state updated"
+echo "  - state: $STATE_FILE"
 echo "  - graph: $GRAPH_FILE"
 
 if [[ -x "$AUTO_MEMORY_SCRIPT" ]]; then

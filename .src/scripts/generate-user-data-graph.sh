@@ -45,9 +45,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-PROJECT_ROOT="$(project_root "$SCRIPT_DIR")"
+PROJECT_ROOT="$(project_root)"
 if [[ -z "$ROOT" ]]; then
-    ROOT="$(user_data_root "$SCRIPT_DIR")"
+    ROOT="$(user_data_root)"
 fi
 ROOT="$(to_posix_path "$ROOT")"
 
@@ -112,10 +112,6 @@ function is_generated_graph(rel) {
     if (rel ~ /^pensieve-graph(\.[^\/]+)?\.md$/) return 1
     return 0
 }
-function is_generated_skill(rel) {
-    if (rel ~ /^SKILL(\.[^\/]+)?\.md$/) return 1
-    return 0
-}
 BEGIN {
     node_count = 0
     edge_count = 0
@@ -132,7 +128,7 @@ BEGIN {
             next
         }
         current_rel = relpath(FILENAME, root)
-        if (is_generated_graph(current_rel) || is_generated_skill(current_rel)) {
+        if (is_generated_graph(current_rel)) {
             next
         }
         current_cat = category(current_rel)
@@ -184,7 +180,7 @@ END {
     print ""
     print "# Pensieve User Data Graph"
     print ""
-    print "> Auto-generated in Claude Code; in other environments, run `bash .src/scripts/maintain-project-skill.sh --event sync` after editing pensieve to trigger generation."
+    print "> Auto-generated in Claude Code; in other environments, run `bash \"$PENSIEVE_SKILL_ROOT/.src/scripts/maintain-project-state.sh\" --event sync` after editing pensieve to trigger generation."
     print ""
     print "- Root: `" root "`"
     print "- Categories: maxims, decisions, knowledge, pipelines"

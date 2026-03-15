@@ -16,7 +16,7 @@
 ## 存储位置
 
 ```text
-<skill-root>/maxims/
+<project>/.pensieve/maxims/
 └── {one-sentence-conclusion}.md
 ```
 

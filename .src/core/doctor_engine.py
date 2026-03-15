@@ -147,14 +147,13 @@ def _build_report(
             lines.append(f"{i}. [{f.finding_id}] {f.message} (`{f.path}`)")
     lines.append("")
     lines.append("## 4) Migration & Structure Check")
-    lines.append(f"- Deprecated paths found: {_yes_no(flags.get('has_deprecated_paths'))}")
-    lines.append(f"- Duplicate skill copies: {_yes_no(flags.get('has_deprecated_paths'))}")
-    lines.append(f"- Legacy skill copies: {_yes_no(flags.get('has_deprecated_paths'))}")
-    lines.append(f"- Standalone graph files: {_yes_no(flags.get('has_legacy_graph_files'))}")
+    lines.append(f"- Legacy v1 paths found: {_yes_no(flags.get('has_deprecated_paths'))}")
     lines.append(f"- Missing required dirs: {_yes_no(flags.get('has_missing_directories'))}")
+    lines.append(f"- Critical file drift: {_yes_no(flags.get('has_critical_file_drift'))}")
     lines.append(
         f"- MEMORY.md missing/drifted: {_yes_no(flags.get('has_missing_memory_file') or flags.get('has_memory_content_drift'))}"
     )
+    lines.append(f"- state.md inline graph: {_yes_no(flags.get('has_state_inline_graph'))}")
     lines.append(f"- Suggested action: `{next_step if next_step in {'migrate', 'upgrade', 'self-improve'} else 'none'}`")
     lines.append("")
     lines.append("## 5) Action Plan")
