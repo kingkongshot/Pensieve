@@ -68,13 +68,7 @@ Pensieve 不只是存文档——它让 agent 的每一次对话都更精准：
 层与层之间通过 `基于 / 导致 / 相关` 三类语义链接形成图谱。随着使用积累，Pensieve 自动构建项目知识的有向图：
 
 <img src="docs/graph-overview.png" width="100%" alt="Pensieve knowledge graph overview" />
-
-<details>
-<summary><b>放大细节</b></summary>
-
 <img src="docs/graph-detail.png" width="100%" alt="Pensieve knowledge graph detail" />
-
-</details>
 
 详细规范见 `.src/references/` 下的 [maxims.md](.src/references/maxims.md)、[decisions.md](.src/references/decisions.md)、[knowledge.md](.src/references/knowledge.md)、[pipelines.md](.src/references/pipelines.md)。
 
