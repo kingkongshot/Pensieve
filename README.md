@@ -21,66 +21,146 @@
 | Forget the reasoning behind a design three months later | Decisions record context and alternatives |
 | Re-read docs to locate module boundaries every time | Knowledge caches exploration results for direct reuse |
 
-## Upgrading from older versions (< 1.0)
-
-1.0 restructured the installation architecture. If your current version is below 1.0, **do not use `git pull`** — you need a full uninstall and reinstall.
-
-How to tell: if you installed Pensieve via `claude plugin install`, or you cannot find `.claude/skills/pensieve/.src/manifest.json`, you are on an older version.
-
-User data (`maxims/`, `decisions/`, `knowledge/`, `pipelines/`) will be preserved; everything else will be cleaned up:
-
-```bash
-# 1. Uninstall Claude plugin and cache
-claude plugin uninstall pensieve 2>/dev/null
-rm -rf ~/.claude/plugins/cache/kingkongshot-marketplace/pensieve
-
-# 2. Clean skill directory (keep user data only)
-cd .claude/skills/pensieve
-rm -rf .src agents .git .gitignore SKILL.md LICENSE README.md .state .backup .obsidian temp resource
-
-# 3. Clean other possible legacy skill paths
-rm -rf .agents/skills/pensieve
-
-# 4. Reinstall
-cd ../../..
-git clone -b main https://github.com/kingkongshot/Pensieve.git /tmp/pensieve-new
-cp -r /tmp/pensieve-new/{.git,.gitignore,.src,agents,LICENSE,README.md} .claude/skills/pensieve/
-rm -rf /tmp/pensieve-new
-
-# 5. Initialize + health check
-bash .claude/skills/pensieve/.src/scripts/init-project-data.sh
-bash .claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
-```
-
 ## Installation
 
 Prerequisites: `git`, `bash`, `Python 3.8+`.
 
+> **Multi-client note**: The examples below use the Claude Code path `~/.claude/skills/pensieve`. For other clients, substitute the corresponding path:
+> | Client | Install path |
+> |--------|----------|
+> | Claude Code | `~/.claude/skills/pensieve` |
+> | Cursor | `~/.cursor/skills/pensieve` |
+> | Generic Agent | `~/.agents/skills/pensieve` |
+
 ```bash
-# 1. Install skill
-git clone -b main https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
+# 1. Install system code globally (one-time, shared by all projects)
+git clone -b main https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
 
-# 2. Initialize (create user data directories, seed default content, generate SKILL.md router file)
-bash .claude/skills/pensieve/.src/scripts/init-project-data.sh
+# 2. Install global hooks (Claude Code only, one-time)
+#    Other clients skip this step — hooks are a Claude Code-specific feature
+bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
 
-# 3. Install Claude hooks (required for Claude Code users, skip for other clients)
-claude plugin marketplace add kingkongshot/Pensieve#claude-plugin
-claude plugin install pensieve@kingkongshot-marketplace --scope project
+# 3. Initialize user data in your project
+cd <your-project>
+bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
 ```
 
-The skill and hooks have different update mechanisms — the skill uses `git pull`, hooks use `claude plugin update` — so they live on two separate branches, each upgrading independently without affecting the other.
+System code is installed once globally at `~/.claude/skills/pensieve/`, while user data is stored per project at `<project>/.pensieve/`. Ten projects share the same system code, each maintaining its own independent project knowledge.
+
+### AI Agent Auto-Install Reference
+
+When a user asks an AI agent to install Pensieve, the agent should follow this decision flow:
+
+**Step 1: Check global installation status**
+
+```bash
+# Check if already installed
+if [[ -d ~/.claude/skills/pensieve/.src ]]; then
+    echo "Pensieve is already installed globally, skipping clone"
+else
+    # Check if ~/.claude is a git repo (some users sync ~/.claude config with git)
+    if git -C ~/.claude rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        # ~/.claude is a git repo — install as submodule
+        git -C ~/.claude submodule add -b main https://github.com/kingkongshot/Pensieve.git skills/pensieve
+    else
+        git clone -b main https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
+    fi
+    # Hooks are a Claude Code-specific feature; other clients skip this step
+    bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
+fi
+```
+
+**Step 2: Determine whether to run project initialization**
+
+```bash
+# If the current directory is ~/.claude, do not auto-initialize project data
+# (unless the user explicitly states they are developing ~/.claude itself as a project)
+CURRENT_DIR="$(pwd)"
+CLAUDE_DIR="$(cd ~/.claude 2>/dev/null && pwd)"
+if [[ "$CURRENT_DIR" == "$CLAUDE_DIR" ]]; then
+    echo "Current directory is ~/.claude, skipping project initialization. If you need Pensieve here, please confirm explicitly."
+    exit 0
+fi
+```
+
+**Step 3: Check for legacy data and initialize**
+
+```bash
+# Check if the current project has legacy user data
+# Criteria: a legacy directory contains maxims/decisions/knowledge/pipelines subdirectories
+# Note: under ~/.claude, skills/pensieve is the v2 install location, but if it contains
+# user data subdirectories (maxims/, etc.), that indicates v1 project-level install remnants
+# that still need migration
+HAS_LEGACY=0
+for legacy_dir in .claude/skills/pensieve .agents/skills/pensieve skills/pensieve .claude/pensieve; do
+    if [[ -d "$legacy_dir" ]] && [[ -d "$legacy_dir/maxims" || -d "$legacy_dir/decisions" || -d "$legacy_dir/knowledge" || -d "$legacy_dir/pipelines" ]]; then
+        HAS_LEGACY=1
+        break
+    fi
+done
+
+if [[ "$HAS_LEGACY" -eq 1 ]]; then
+    # Legacy data found — ask user whether to migrate
+    echo "Legacy Pensieve user data detected. Migrate to v2?"
+    # After user confirms:
+    bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
+    bash ~/.claude/skills/pensieve/.src/scripts/run-migrate.sh
+    bash ~/.claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
+elif [[ -d .pensieve ]]; then
+    echo "Pensieve is already initialized in the current project"
+else
+    bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
+fi
+```
+
+> **Key takeaway**: Check global installation first -> determine whether `~/.claude` is a git repo to decide clone vs. submodule -> skip project initialization for the `~/.claude` directory -> detect legacy data to decide init vs. migrate.
 
 ## Updating
 
 ```bash
-cd .claude/skills/pensieve
-git pull --ff-only
-bash .src/scripts/run-doctor.sh --strict
+# Update system code (one operation, takes effect for all projects)
+cd ~/.claude/skills/pensieve
+git pull --ff-only || { git fetch origin && git reset --hard "origin/$(git rev-parse --abbrev-ref HEAD)"; }
+
+# Run a health check in your project (optional but recommended)
+cd <your-project>
+bash ~/.claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
 ```
 
-`git pull` only updates system files (`.src/`, `agents/`). User data is protected by `.gitignore` and will not be overwritten. **Do not delete user data directories before updating** — they are your accumulated project memory, and once deleted they are gone.
+`git pull --ff-only` handles normal updates. If the remote branch was force-pushed (e.g., after a squash and republish), ff-only will fail, and `fetch + reset` will sync your local copy to the latest remote state. This is safe -- the skill directory only contains tracked system files; user data lives in `<project>/.pensieve/` and will not be overwritten.
 
 For complete installation, update, reinstall, and uninstall instructions, see [skill-lifecycle.md](.src/references/skill-lifecycle.md).
+
+## Upgrading from an Older Version
+
+If your Pensieve was installed at the project level (code in `<project>/.claude/skills/pensieve/`), or installed via `claude plugin install`, you need to migrate to the v2 architecture:
+
+```bash
+# 1. Install system code globally (if not already installed)
+if [[ ! -d ~/.claude/skills/pensieve ]]; then
+    # Check if ~/.claude is a git repo
+    if git -C ~/.claude rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        git -C ~/.claude submodule add -b main https://github.com/kingkongshot/Pensieve.git skills/pensieve
+    else
+        git clone -b main https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
+    fi
+fi
+
+# 2. Install global hooks (Claude Code only)
+#    Other clients skip this step — hooks are a Claude Code-specific feature
+bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
+
+# 3. Run migration in each project
+cd <your-project>
+bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
+bash ~/.claude/skills/pensieve/.src/scripts/run-migrate.sh
+bash ~/.claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
+
+# 4. Uninstall the old plugin (if any)
+claude plugin uninstall pensieve 2>/dev/null || true
+```
+
+`run-migrate.sh` automatically moves user data (`maxims/`, `decisions/`, `knowledge/`, `pipelines/`) from the old path into `<project>/.pensieve/`, moves runtime state from `<project>/.state/` into `<project>/.pensieve/.state/`, cleans up old graph files and README copies, and then removes the legacy directory.
 
 ## Self-Reinforcing Loop
 
@@ -94,9 +174,9 @@ You don't need to maintain the knowledge base manually — everyday development 
      +-- maxim / decision / knowledge / pipeline
 ```
 
-- **On commit**: PostToolUse hook automatically triggers experience extraction
-- **On review**: Executes per-project pipeline, conclusions flow back as knowledge
-- **On retrospective**: Actively request capture, insights are written to the appropriate layer
+- **While editing**: The PostToolUse hook automatically syncs the state.md knowledge graph after Write/Edit (Claude Code only; other clients need to trigger `self-improve` manually)
+- **While reviewing**: Executes per-project pipelines, with conclusions fed back as knowledge
+- **While reflecting**: Proactively request capture; insights are written to the appropriate layer
 
 You just write code — the knowledge base grows on its own.
 
@@ -119,9 +199,9 @@ For detailed specifications, see [maxims.md](.src/references/maxims.md), [decisi
 |---|---|---|
 | `init` | Create data directories, seed default content | "Initialize pensieve for me" |
 | `upgrade` | Refresh skill source code | "Upgrade pensieve" |
-| `migrate` | Clean legacy paths, align seed files | "Clean up old structure" |
-| `doctor` | Read-only scan, check structure and formatting | "Check if my data has any issues" |
-| `self-improve` | Extract insights from conversations and diffs, write to four-layer knowledge | "Capture what we learned this time" |
+| `migrate` | Migrate legacy data, align seed files | "Migrate to v2" |
+| `doctor` | Read-only scan, check structure and formatting | "Check if the data has any issues" |
+| `self-improve` | Extract insights from conversations and diffs, write to four knowledge layers | "Capture what we learned this time" |
 
 For tool boundaries and redirect rules, see [tool-boundaries.md](.src/references/tool-boundaries.md).
 
@@ -131,26 +211,33 @@ For tool boundaries and redirect rules, see [tool-boundaries.md](.src/references
 ### Directory Structure
 
 ```text
-<project>/
-├── .claude/skills/pensieve/   # Skill root directory (git clone target)
-│   ├── .src/                  # System files (tracked)
-│   ├── agents/                # Agent configs (tracked)
-│   ├── SKILL.md               # Router file (generated by init, gitignored)
-│   ├── maxims/                # User data (gitignored)
-│   ├── decisions/             # User data (gitignored)
-│   ├── knowledge/             # User data (gitignored)
-│   └── pipelines/             # User data (gitignored)
-└── .state/                    # Runtime artifacts: reports, markers, graph snapshots
+~/.claude/skills/pensieve/          # User-level (single global installation)
+├── SKILL.md                        #   Static routing file (tracked)
+├── .src/                           #   System code, templates, references, core engine
+│   ├── core/
+│   ├── scripts/
+│   ├── templates/
+│   ├── references/
+│   └── tools/
+└── agents/                         #   Agent configurations
+
+<project>/.pensieve/                # Project-level (per-project, can be version-controlled)
+├── maxims/                         #   Engineering principles
+├── decisions/                      #   Architecture decisions
+├── knowledge/                      #   Cached exploration results
+├── pipelines/                      #   Reusable workflows
+├── state.md                        #   Dynamic: lifecycle state + knowledge graph
+└── .state/                         #   Runtime artifacts (gitignored)
 ```
 
 `.src/manifest.json` is the anchor for the skill root directory — scripts use it to locate all paths.
 
 ### Design Principles
 
-- **Separate system capabilities from user data** — Updates never overwrite your accumulated project knowledge
-- **Single source of truth for rules** — Directories, key files, and legacy paths are all defined in `.src/core/schema.json`
-- **Confirm before executing** — When scope is unclear, ask first; don't auto-start long-running processes
-- **Read specs before writing data** — Before creating any user data, read the format specs in `.src/references/`
+- **Physical separation of system code and user data** -- System code lives in `~/.claude/skills/pensieve/`, user data in `<project>/.pensieve/`; a `git pull` to update the system can never touch project data
+- **Single source of truth for rules** -- Directories, key files, and migration paths are all defined by `.src/core/schema.json`
+- **Confirm before executing** -- When scope is unclear, ask first; never auto-start long-running processes
+- **Read the spec before writing data** -- Always read the format specifications in `.src/references/` before creating any user data
 
 </details>
 

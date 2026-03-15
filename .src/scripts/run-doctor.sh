@@ -13,13 +13,13 @@ Usage:
 
 Options:
   --root <path>             Scan root. Default: current user data root
-  --state-dir <path>        Runtime state dir. Default: <project>/.state
+  --state-dir <path>        Runtime state dir. Default: <project>/.pensieve/.state
   --report <path>           Markdown report path. Default: <state-dir>/pensieve-doctor-report.md
   --summary-json <path>     Summary json path. Default: <state-dir>/pensieve-doctor-summary.json
   --scan-output <path>      Structure scan json path. Default: <state-dir>/pensieve-structure-scan.json
   --frontmatter-output <path> Frontmatter scan json path. Default: <state-dir>/pensieve-frontmatter-scan.json
   --graph-output <path>     Graph markdown path. Default: <state-dir>/pensieve-user-data-graph.md
-  --skip-maintain-skill     Skip maintain-project-skill after report generation
+  --skip-maintain-state     Skip maintain-project-state after report generation
   --strict                  Exit 3 when final status is FAIL
   -h, --help                Show help
 USAGE
@@ -32,7 +32,7 @@ SUMMARY_JSON=""
 SCAN_OUTPUT=""
 FRONTMATTER_OUTPUT=""
 GRAPH_OUTPUT=""
-SKIP_MAINTAIN_SKILL=0
+SKIP_MAINTAIN_STATE=0
 STRICT_MODE=0
 
 while [[ $# -gt 0 ]]; do
@@ -72,8 +72,8 @@ while [[ $# -gt 0 ]]; do
       GRAPH_OUTPUT="$2"
       shift 2
       ;;
-    --skip-maintain-skill)
-      SKIP_MAINTAIN_SKILL=1
+    --skip-maintain-state)
+      SKIP_MAINTAIN_STATE=1
       shift
       ;;
     --strict)
@@ -92,14 +92,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PROJECT_ROOT="$(to_posix_path "$(project_root "$SCRIPT_DIR")")"
+PROJECT_ROOT="$(project_root)" || exit 1
+PROJECT_ROOT="$(to_posix_path "$PROJECT_ROOT")"
+validate_project_root "$PROJECT_ROOT"
 if [[ -z "$ROOT" ]]; then
-  ROOT="$(user_data_root "$SCRIPT_DIR")"
+  ROOT="$(user_data_root)"
 fi
 ROOT="$(to_posix_path "$ROOT")"
 
 if [[ -z "$STATE_DIR" ]]; then
-  STATE_DIR="$(state_root "$SCRIPT_DIR")"
+  STATE_DIR="$(state_root)"
 fi
 STATE_DIR="$(to_posix_path "$STATE_DIR")"
 if [[ "$STATE_DIR" != /* ]]; then
@@ -107,18 +109,7 @@ if [[ "$STATE_DIR" != /* ]]; then
 fi
 
 resolve_path() {
-  local maybe_path="$1"
-  local default_path="$2"
-  local out
-  out="$maybe_path"
-  if [[ -z "$out" ]]; then
-    out="$default_path"
-  fi
-  out="$(to_posix_path "$out")"
-  if [[ "$out" != /* ]]; then
-    out="$PROJECT_ROOT/$out"
-  fi
-  printf '%s\n' "$out"
+  resolve_output_path "$1" "$2" "$PROJECT_ROOT"
 }
 
 REPORT="$(resolve_path "$REPORT" "$STATE_DIR/pensieve-doctor-report.md")"
@@ -133,7 +124,7 @@ mkdir -p "$(dirname "$REPORT")" "$(dirname "$SUMMARY_JSON")" "$(dirname "$SCAN_O
 SCAN_SCRIPT="$SCRIPT_DIR/scan-structure.sh"
 FRONTMATTER_SCRIPT="$SCRIPT_DIR/check-frontmatter.sh"
 GRAPH_SCRIPT="$SCRIPT_DIR/generate-user-data-graph.sh"
-MAINTAIN_SCRIPT="$SCRIPT_DIR/maintain-project-skill.sh"
+MAINTAIN_SCRIPT="$SCRIPT_DIR/maintain-project-state.sh"
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
 SCHEMA_FILE="$SKILL_ROOT/.src/core/schema.json"
 DOCTOR_ENGINE="$SKILL_ROOT/.src/core/doctor_engine.py"
@@ -159,7 +150,7 @@ SUMMARY_SHOULD_FIX="$(json_get_value "$SUMMARY_JSON" "should_fix" "0")"
 SUMMARY_INFO="$(json_get_value "$SUMMARY_JSON" "info" "0")"
 SUMMARY_NEXT="$(json_get_value "$SUMMARY_JSON" "next_step" "none")"
 
-if [[ "$SKIP_MAINTAIN_SKILL" -eq 0 && -x "$MAINTAIN_SCRIPT" ]]; then
+if [[ "$SKIP_MAINTAIN_STATE" -eq 0 && -x "$MAINTAIN_SCRIPT" ]]; then
   bash "$MAINTAIN_SCRIPT" --event doctor --note "doctor summary: status=$SUMMARY_STATUS, must_fix=$SUMMARY_MUST_FIX, should_fix=$SUMMARY_SHOULD_FIX, info=$SUMMARY_INFO, next=$SUMMARY_NEXT" >/dev/null || true
 fi
 

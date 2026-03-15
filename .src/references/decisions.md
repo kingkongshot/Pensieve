@@ -22,7 +22,7 @@ If the content is a cross-project hard rule, promote it to `maxims/`.
 Formal file naming:
 
 ```text
-<skill-root>/decisions/{date}-{statement}.md
+<project>/.pensieve/decisions/{date}-{statement}.md
 ```
 
 ## Mandatory requirements

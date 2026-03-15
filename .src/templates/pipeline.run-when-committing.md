@@ -29,9 +29,9 @@ Before committing, automatically extract insights from the session context + dif
 
 The value of capturing insights lies in reuse next time; unsubstantiated guesses will mislead future decisions.
 
-- Only capture insights that are "reusable and evidence-backed"; unverifiable guesses are not stored.
-- Classification follows the semantic layering: IS -> `knowledge`, WANT -> `decision`, MUST -> `maxim`.
-- Assign by semantics, not by "knowledge first", because misclassification causes a binding-strength mismatch (something that should be MUST ends up as knowledge and gets ignored later).
+- Only capture insights that are reusable and evidence-backed; unverifiable guesses must not be stored.
+- Classify according to semantic layers: IS -> `knowledge`, WANT -> `decision`, MUST -> `maxim`.
+- Assign by semantics, not by "default to knowledge", because misclassification causes a mismatch in binding strength (something that should be MUST but is written as knowledge will easily be ignored later).
 
 ---
 
@@ -71,24 +71,24 @@ The value of capturing insights lies in reuse next time; unsubstantiated guesses
 4. `.src/tools/self-improve.md`
 
 **Steps**:
-1. Read `self-improve.md`, execute its Phase 1 (extract & classify) + Phase 2 (read spec + write)
+1. Read `self-improve.md` and execute its Phase 1 (extract and classify) + Phase 2 (read spec + write)
 2. Extract core insights from the session (may be multiple)
-3. For each insight, first determine its semantic layer and classify (IS->knowledge, WANT->decision, MUST->maxim; multiple layers may be used simultaneously when needed)
-4. Read the spec for the target type in `.src/references/`, generate content per spec
+3. For each insight, first determine the semantic layer and classify (IS->knowledge, WANT->decision, MUST->maxim; may land in multiple layers simultaneously if needed)
+4. Read the spec for the target type from `.src/references/`, and generate content according to the spec
 5. Type-specific requirements:
-   - `decision`: Include the "three exploration cost-reducers" (what to ask less / look up less next time / invalidation conditions)
-   - Exploratory `knowledge`: Include (state transitions / symptom->root cause->location / boundaries & ownership / anti-patterns / verification signals)
-   - `pipeline`: Must meet conditions (recurring + non-interchangeable + verifiable)
-6. Write to the target path, add context links
-7. Refresh the Pensieve generated `SKILL.md`:
+   - `decision`: include the "three exploration-reduction items" (fewer questions next time / fewer lookups / invalidation conditions)
+   - Exploration-type `knowledge`: include (state transitions / symptom->root cause->location / boundaries and ownership / anti-patterns / verification signals)
+   - `pipeline`: must meet conditions (recurring + non-interchangeable steps + verifiable)
+6. Write to target path, add association links
+7. Refresh Pensieve project state:
    ```
-   bash .src/scripts/maintain-project-skill.sh --event self-improve --note "auto-improve: {files}"
+   bash "$PENSIEVE_SKILL_ROOT/.src/scripts/maintain-project-state.sh" --event self-improve --note "auto-improve: {files}"
    ```
 8. Output a brief summary (write path + capture type)
 
 **DO NOT**: Do not ask user for confirmation, do not show drafts awaiting approval, write directly
 
-**Completion criteria**: Insights have been written to user data (or explicitly determined as not needed), root `SKILL.md` and `.state/pensieve-user-data-graph.md` have been refreshed
+**Completion criteria**: Insights have been written to user data (or explicitly determined as not worth capturing), `state.md` and `.state/pensieve-user-data-graph.md` have been refreshed
 
 ---
 
@@ -114,6 +114,6 @@ The value of capturing insights lies in reuse next time; unsubstantiated guesses
 
 ## Failure Fallback
 
-1. `git diff --cached` is empty: Skip Task 2/Task 3, output "no staged changes, nothing to commit".
-2. Capture step fails: Record the blocking reason and skip capture, continue to Task 3; append "suggest running `doctor`" at the end.
-3. Generated `SKILL.md` maintenance fails: Preserve already-captured content, report the failed command and retry suggestion, do not roll back already-written files.
+1. `git diff --cached` is empty: skip Task 2/Task 3, output "no staged changes, nothing to commit".
+2. Capture step fails: log the blocking reason and skip capture, continue to Task 3; append "suggest running `doctor`" at the end.
+3. `state.md` maintenance fails: keep already-captured content, report the failed command and retry suggestion, do not roll back already-written files.

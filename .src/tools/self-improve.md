@@ -27,10 +27,12 @@ Read before writing:
 
 ## Post-write refresh
 
-After writing user data, refresh the generated SKILL.md and graph:
+After writing user data, refresh the project state and graph:
+
+> All `.src/` paths below are relative to the skill root (`$PENSIEVE_SKILL_ROOT`, typically `~/.claude/skills/pensieve/`).
 
 ```bash
-bash .src/scripts/maintain-project-skill.sh --event self-improve --note "description"
+bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/maintain-project-state.sh" --event self-improve --note "description"
 ```
 
 In a Claude Code environment this is triggered automatically by hooks; in other environments it must be run manually.

@@ -4,7 +4,7 @@ type: knowledge
 title: Pensieve Installation and Updates
 status: active
 created: 2026-03-06
-updated: 2026-03-07
+updated: 2026-03-10
 tags: [pensieve, install, update, operations]
 ---
 
@@ -14,138 +14,121 @@ When the user asks how to install, initialize, update, reinstall, or uninstall P
 
 ## Installation
 
-### Method A: Install the main branch skill (required)
+### Step 1: Install system code (global, one-time)
 
-Clone the repository directly into the project's skill directory:
+Clone the repository to the user-level skill directory:
 
 ```bash
-git clone -b main https://github.com/kingkongshot/Pensieve.git .claude/skills/pensieve
+# English users
+git clone -b main https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
+
+# Chinese users
+git clone -b zh https://github.com/kingkongshot/Pensieve.git ~/.claude/skills/pensieve
 ```
 
 Notes:
 
-- The `main` branch repository root is the skill root — there is no longer a `skill-source/pensieve/` layer
-- Tracked system files are `.src/`, `agents/`
-- The root-level `SKILL.md` is a generated file, written to a fixed location after initialization, and ignored by `.gitignore`
-- User data directories are `maxims/decisions/knowledge/pipelines`
-- User data directories and the generated `SKILL.md` are both ignored by the root `.gitignore`, so `git pull` will not overwrite them
-- No longer depends on `npx skills add --copy`
+- System files (`.src/`, `agents/`, `SKILL.md`) are tracked by git
+- `SKILL.md` is a static, tracked file — the skill interface declaration
+- A single installation serves all projects
 
-After installation:
-
-1. Have the agent run `init`
-2. Or manually execute in the skill root directory:
+### Step 2: Install hooks (global, one-time)
 
 ```bash
-bash .src/scripts/init-project-data.sh
+bash ~/.claude/skills/pensieve/.src/scripts/install-hooks.sh
 ```
 
-### Method B: Install Claude plugin hooks (optional add-on)
+This writes hook configuration to `~/.claude/settings.json`. Hooks automatically apply to all projects. Projects without `.pensieve/` are unaffected (hooks exit silently).
 
-Hooks are not on the `main` branch; they are on a separate `claude-plugin` branch, installed via marketplace:
+### Step 3: Initialize project data (per project)
 
 ```bash
-claude plugin marketplace add kingkongshot/Pensieve#claude-plugin
-claude plugin install pensieve@kingkongshot-marketplace --scope project
+cd <your-project>
+bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
 ```
 
-Notes:
+Or have the agent run `init`.
 
-- The plugin only provides hooks; it does not carry skill content
-- Hooks and skill lifecycles are decoupled: the plugin updates via marketplace, the skill updates via git
-- If you want Claude hooks, you still need to complete Method A's skill clone first
+This creates `maxims/decisions/knowledge/pipelines` under `<project>/.pensieve/` and seeds default content.
 
 ## Post-initialization verification
 
 ```bash
-bash .src/scripts/run-doctor.sh --strict
+bash ~/.claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
 ```
 
 PASS conditions:
 
-- `.src/` exists
-- `agents/` exists
-- Root-level `SKILL.md` has been generated
-- `maxims/decisions/knowledge/pipelines` directories are all present
-- `.state/` is generated in the project root
-- Default pipelines and taste-review knowledge have been seeded
+- Skill root contains `.src/`
+- Skill root contains `SKILL.md` (static, tracked)
+- `<project>/.pensieve/{maxims,decisions,knowledge,pipelines}` directories are all present
+- `<project>/.pensieve/.state/` has been generated
+- `<project>/.pensieve/state.md` has been generated
+- Default pipeline and taste-review knowledge have been seeded
 
 ## Updates
 
-### Updating the main branch skill
+### Update system code
 
 ```bash
-cd .claude/skills/pensieve
-git pull --ff-only
+cd ~/.claude/skills/pensieve
+git pull --ff-only || { git fetch origin && git reset --hard "origin/$(git rev-parse --abbrev-ref HEAD)"; }
 ```
 
-Fixed sequence after updating:
+`--ff-only` works for normal updates; falls back to `fetch + reset` when the remote has been force-pushed (the skill directory contains only tracked files, so this is safe).
+
+A single update takes effect for all projects. After updating:
 
 ```bash
-bash .src/scripts/run-doctor.sh --strict
+cd <your-project>
+bash ~/.claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
 ```
 
-If `doctor` reports structural migration issues, then run:
+If `doctor` reports structural migration issues:
 
 ```bash
-bash .src/scripts/run-migrate.sh
-bash .src/scripts/run-doctor.sh --strict
+bash ~/.claude/skills/pensieve/.src/scripts/run-migrate.sh
+bash ~/.claude/skills/pensieve/.src/scripts/run-doctor.sh --strict
 ```
-
-### Updating claude-plugin branch hooks
-
-```bash
-claude plugin update pensieve
-```
-
-Interactive equivalent command:
-
-```text
-/plugin update pensieve
-```
-
-This only updates hooks and does not affect user data in the main branch skill clone.
 
 ## Reinstallation
 
-If system files have been corrupted by your own changes, the simplest reinstallation method is:
+If you have corrupted the system files yourself:
 
-1. Back up local user data directories: `maxims/`, `decisions/`, `knowledge/`, `pipelines/`
-2. Delete the old skill checkout
-3. Re-run the installation
-4. Run `init`
+1. Back up project user data: `<project>/.pensieve/` (for each project)
+2. Delete the old skill checkout: `rm -rf ~/.claude/skills/pensieve`
+3. Clone again (Step 1)
+4. Run `init` for each project (Step 3)
 5. Run `doctor`
 
-If it is just a normal upgrade, do not reinstall — use `git pull --ff-only` directly.
+If this is just a normal upgrade, do not reinstall — use the upgrade tool or manually run `git pull`.
 
 ## Uninstallation
 
-Simply delete the installed skill root directory.
+```bash
+# Manually remove pensieve hook entries from ~/.claude/settings.json
+# Delete system code
+rm -rf ~/.claude/skills/pensieve
 
-If you also want to preserve user data, back up first:
+# Delete project data (optional, per project)
+rm -rf <project>/.pensieve
+```
 
-- `maxims/`
-- `decisions/`
-- `knowledge/`
-- `pipelines/`
-- `.state/` (if you want to keep health check reports, migration backups, session markers)
+## Hook capabilities
 
-## Claude add-on capabilities
-
-If the `claude-plugin` branch is also installed, you additionally get:
+After installing hooks, the following additional capabilities are available:
 
 - SessionStart marker check
-- PreToolUse Explore/Plan prompt injection
-- PostToolUse graph and auto memory auto-sync
-- Claude native `/plugin update` lifecycle
+- PreToolUse Explore/Plan prompt injection (SKILL.md + state.md)
+- PostToolUse graph and auto-memory sync
 
 ## Routing rules
 
-- Question "How to install/reinstall Pensieve":
-  Read this file first, then guide to `init`
-- Question "How to update Pensieve":
-  Read this file first, then guide to `upgrade`
-- Question "How to clean up old structures/old graph":
-  Read this file first, then guide to `migrate`
-- Question "How to verify everything is fine after installation":
-  Read this file first, then guide to `doctor`
+- Ask "How do I install/reinstall Pensieve":
+  Read this file first, then direct to `init`
+- Ask "How do I update Pensieve":
+  Read this file first, then direct to `upgrade`
+- Ask "How do I clean up old structures/old graph":
+  Read this file first, then direct to `migrate`
+- Ask "How do I verify everything is working after installation":
+  Read this file first, then direct to `doctor`

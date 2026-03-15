@@ -1,13 +1,14 @@
 #!/bin/bash
 # Pensieve shared library
 #
-# Conventions:
-# - The skill root is the git checkout root and contains tracked system files plus ignored user data directories.
-# - Tracked system files live under .src/ and agents/.
-# - SKILL.md lives at the skill root too, but it is generated locally and ignored by git.
-# - User data lives beside them under maxims/decisions/knowledge/pipelines and is ignored by git.
-# - Hidden runtime state lives under <project-root>/.state.
+# Conventions (v2):
+# - The skill root is the global git checkout at ~/.claude/skills/pensieve/.
+# - Tracked system files live under .src/, agents/, and SKILL.md (static, tracked).
+# - User data lives at <project>/.pensieve/ (maxims/decisions/knowledge/pipelines).
+# - Dynamic project state lives at <project>/.pensieve/state.md.
+# - Hidden runtime state lives under <project>/.pensieve/.state/.
 
+# Sync marker: v2026-03-10 — run-hook.sh has a standalone copy; keep in sync.
 to_posix_path() {
     local raw_path="$1"
     [[ -n "$raw_path" ]] || {
@@ -50,11 +51,6 @@ skill_root_from_script() {
     return 1
 }
 
-# Backward-compatible alias used by older scripts.
-plugin_root_from_script() {
-    skill_root_from_script "$1"
-}
-
 skill_root() {
     local caller="${1:-$(pwd)}"
     if [[ -n "${PENSIEVE_SKILL_ROOT:-}" ]]; then
@@ -82,14 +78,16 @@ state_root() {
         if [[ "$state_dir" == /* ]]; then
             echo "$state_dir"
         else
-            echo "$(project_root "$caller")/$state_dir"
+            local pr
+            pr="$(project_root "$caller")" || { echo "state_root: project_root failed" >&2; return 1; }
+            echo "$pr/$state_dir"
         fi
         return 0
     fi
 
     local pr
-    pr="$(project_root "$caller")"
-    echo "$pr/.state"
+    pr="$(project_root "$caller")" || { echo "state_root: project_root failed" >&2; return 1; }
+    echo "$pr/.pensieve/.state"
 }
 
 project_root() {
@@ -106,35 +104,43 @@ project_root() {
         return 0
     fi
 
-    local sr
-    if ! sr="$(skill_root "$caller" 2>/dev/null)"; then
-        if [[ -d "$caller" ]]; then
-            to_posix_path "$caller"
-        else
-            to_posix_path "$(dirname "$caller")"
-        fi
-        return 0
+    # v2: skill root lives at user-level (~/.claude/skills/pensieve/), so we
+    # cannot derive project root from it. Use the caller's directory context.
+    local start_dir
+    if [[ -d "$caller" ]]; then
+        start_dir="$caller"
+    else
+        start_dir="$(dirname "$caller")"
     fi
-    case "$sr" in
-        */.agents/skills/*)
-            echo "${sr%/.agents/skills/*}"
-            return 0
-            ;;
-        */.claude/skills/*)
-            echo "${sr%/.claude/skills/*}"
-            return 0
-            ;;
-        */.codex/skills/*)
-            echo "${sr%/.codex/skills/*}"
-            return 0
-            ;;
-        */.cursor/skills/*)
-            echo "${sr%/.cursor/skills/*}"
-            return 0
-            ;;
-    esac
 
-    git -C "$sr" rev-parse --show-toplevel 2>/dev/null || pwd
+    # Try git first from the caller's directory.
+    # But skip if the result is the skill root itself (v2: skill root is a
+    # separate git repo at user-level, not the project).
+    local git_root
+    if git_root="$(git -C "$start_dir" rev-parse --show-toplevel 2>/dev/null)"; then
+        git_root="$(to_posix_path "$git_root")"
+        local sr_check
+        if sr_check="$(skill_root "$caller" 2>/dev/null)" && [[ "$git_root" == "$sr_check" ]]; then
+            : # git root is the skill root, not the project — skip
+        else
+            echo "$git_root"
+            return 0
+        fi
+    fi
+
+    # Walk up looking for .pensieve/ directory (v2 project marker).
+    local dir
+    dir="$(cd "$start_dir" && pwd)"
+    while [[ "$dir" != "/" ]]; do
+        if [[ -d "$dir/.pensieve" ]]; then
+            echo "$dir"
+            return 0
+        fi
+        dir="$(cd "$dir/.." && pwd)"
+    done
+
+    echo "project_root: unable to determine project root from '$start_dir'. Set PENSIEVE_PROJECT_ROOT or cd into your project." >&2
+    return 1
 }
 
 user_data_root() {
@@ -142,7 +148,9 @@ user_data_root() {
         to_posix_path "$PENSIEVE_DATA_ROOT"
         return 0
     fi
-    skill_root "${1:-$(pwd)}"
+    local pr
+    pr="$(project_root "${1:-$(pwd)}")" || { echo "user_data_root: project_root failed" >&2; return 1; }
+    echo "$pr/.pensieve"
 }
 
 skill_manifest_file() {
@@ -205,10 +213,16 @@ auto_memory_file() {
     echo "$dr/MEMORY.md"
 }
 
-project_skill_file() {
+project_state_file() {
     local dr
     dr="$(user_data_root "${1:-$(pwd)}")"
-    echo "$dr/SKILL.md"
+    echo "$dr/state.md"
+}
+
+skill_md_file() {
+    local sr
+    sr="$(skill_root "${1:-$(pwd)}")"
+    echo "$sr/SKILL.md"
 }
 
 project_graph_file() {
@@ -227,27 +241,28 @@ ensure_user_data_root() {
 ensure_ignore_all() {
     local dir="$1"
     local ignore_file="$dir/.gitignore"
-    local payload=""
 
+    if grep -Fxq '*' "$ignore_file" 2>/dev/null; then
+        return 0
+    fi
+
+    local payload=""
     if [[ -f "$ignore_file" ]]; then
         payload="$(cat "$ignore_file")"
     fi
-
-    if ! grep -Fxq '*' "$ignore_file" 2>/dev/null; then
-        payload="${payload}"$'\n''*'
-    fi
-    if ! grep -Fxq '!.gitignore' "$ignore_file" 2>/dev/null; then
-        payload="${payload}"$'\n''!.gitignore'
-    fi
+    payload="${payload}"$'\n''*'
 
     printf '%s\n' "${payload#$'\n'}" > "$ignore_file"
 }
 
 ensure_state_dir() {
     local dir
-    dir="${1:-$(state_root "${2:-$(pwd)}")}"
+    dir="${1:-$(state_root "${2:-$(pwd)}")}" || return 1
     dir="$(to_posix_path "$dir")"
-    mkdir -p "$dir"
+    if ! mkdir -p "$dir"; then
+        echo "ensure_state_dir: failed to create $dir" >&2
+        return 1
+    fi
     ensure_ignore_all "$dir"
     echo "$dir"
 }
@@ -258,95 +273,6 @@ python_bin() {
 
 runtime_now_utc() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
-}
-
-runtime_log() {
-    local level="$1"
-    local code="$2"
-    local message="$3"
-    shift 3 || true
-
-    local ts
-    ts="$(runtime_now_utc)"
-    printf '[pensieve-runtime] ts=%s level=%s code=%s message=%s' "$ts" "$level" "$code" "$message" >&2
-
-    local kv
-    for kv in "$@"; do
-        printf ' %s' "$kv" >&2
-    done
-    printf '\n' >&2
-}
-
-run_with_retry_timeout() {
-    local label="$1"
-    local timeout_sec="$2"
-    local retries="$3"
-    shift 3
-
-    if ! [[ "$timeout_sec" =~ ^[0-9]+$ ]]; then
-        runtime_log "error" "RUNTIME_USAGE" "timeout_sec must be a non-negative integer" "label=$label" "timeout_sec=$timeout_sec"
-        return 2
-    fi
-    if ! [[ "$retries" =~ ^[0-9]+$ ]]; then
-        runtime_log "error" "RUNTIME_USAGE" "retries must be a non-negative integer" "label=$label" "retries=$retries"
-        return 2
-    fi
-    if [[ "${1:-}" != "--" ]]; then
-        runtime_log "error" "RUNTIME_USAGE" "missing -- separator before command" "label=$label"
-        return 2
-    fi
-    shift
-    if [[ $# -eq 0 ]]; then
-        runtime_log "error" "RUNTIME_USAGE" "missing command" "label=$label"
-        return 2
-    fi
-
-    local py
-    py="$(python_bin || true)"
-    if [[ -z "$py" && "$timeout_sec" -gt 0 ]]; then
-        runtime_log "warn" "RUNTIME_NO_TIMEOUT" "python not available; running without timeout" "label=$label"
-    fi
-
-    local attempt=1
-    local rc
-    while true; do
-        if [[ -n "$py" && "$timeout_sec" -gt 0 ]]; then
-            "$py" - "$timeout_sec" "$@" <<'PY'
-import subprocess
-import sys
-
-timeout = float(sys.argv[1])
-cmd = sys.argv[2:]
-try:
-    completed = subprocess.run(cmd, timeout=timeout)
-    sys.exit(completed.returncode)
-except subprocess.TimeoutExpired:
-    sys.exit(124)
-PY
-            rc=$?
-        else
-            "$@"
-            rc=$?
-        fi
-
-        if [[ "$rc" -eq 0 ]]; then
-            return 0
-        fi
-
-        if [[ "$rc" -eq 124 ]]; then
-            runtime_log "warn" "RUNTIME_TIMEOUT" "command timed out" "label=$label" "attempt=$attempt" "timeout_sec=$timeout_sec"
-        else
-            runtime_log "warn" "RUNTIME_RETRY" "command failed" "label=$label" "attempt=$attempt" "exit=$rc"
-        fi
-
-        if (( attempt > retries )); then
-            runtime_log "error" "RUNTIME_FAILED" "command exhausted retries" "label=$label" "attempts=$attempt" "exit=$rc"
-            return "$rc"
-        fi
-
-        attempt=$((attempt + 1))
-        sleep 1
-    done
 }
 
 json_get_value() {
@@ -387,4 +313,55 @@ elif isinstance(value, str):
 else:
     print(default_value)
 PY
+}
+
+resolve_output_path() {
+    local maybe_path="$1"
+    local default_path="$2"
+    local project_dir="${3:-$(project_root "$(pwd)")}"
+    local out
+    out="$maybe_path"
+    if [[ -z "$out" ]]; then
+        out="$default_path"
+    fi
+    out="$(to_posix_path "$out")"
+    if [[ "$out" != /* ]]; then
+        out="$project_dir/$out"
+    fi
+    printf '%s\n' "$out"
+}
+
+# Validate that a resolved project root is reasonable.
+# Rejects $HOME itself, filesystem root, and /tmp to prevent accidental
+# data writes when scripts are invoked from outside a project directory.
+validate_project_root() {
+    local root="$1"
+
+    if [[ -z "$root" ]]; then
+        echo "Refusing to use empty string as project root. Set PENSIEVE_PROJECT_ROOT or cd into your project directory first." >&2
+        return 1
+    fi
+
+    local home_dir
+    home_dir="$(to_posix_path "$HOME")"
+
+    case "$root" in
+        /|/tmp|/tmp/*)
+            echo "Refusing to use '$root' as project root. cd into your project directory first." >&2
+            return 1
+            ;;
+    esac
+
+    if [[ "$root" == "$home_dir" ]]; then
+        echo "Refusing to use home directory '$root' as project root. cd into your project directory first." >&2
+        return 1
+    fi
+
+    # Reject skill root itself — it contains .src/manifest.json but is not a project.
+    if [[ -f "$root/.src/manifest.json" ]]; then
+        echo "Refusing to use skill root '$root' as project root. cd into your project directory first." >&2
+        return 1
+    fi
+
+    return 0
 }

@@ -16,7 +16,7 @@ If it is only valid in the current project, it is not a `maxim` — it is a `dec
 ## Storage location
 
 ```text
-<skill-root>/maxims/
+<project>/.pensieve/maxims/
 └── {one-sentence-conclusion}.md
 ```
 

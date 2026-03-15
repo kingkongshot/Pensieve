@@ -11,6 +11,10 @@ fi
 SCRIPT_NAME="$1"
 shift
 
+# NOTE: This to_posix_path is a standalone copy required before lib.sh can be
+# sourced (we need it to resolve the skill root first). Keep in sync with
+# the canonical implementation in lib.sh:to_posix_path.
+# Sync marker: v2026-03-10
 to_posix_path() {
   local raw_path="$1"
   [[ -n "$raw_path" ]] || {
@@ -38,11 +42,25 @@ to_posix_path() {
 
 ROOT_RAW="${PENSIEVE_SKILL_ROOT:-}"
 if [[ -z "$ROOT_RAW" ]]; then
-  SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  ROOT_RAW="$(cd "$SELF_DIR/../.." && pwd)"
+  # v2: default to user-level skill root
+  ROOT_RAW="$HOME/.claude/skills/pensieve"
+  # Fallback: derive from script location
+  if [[ ! -d "$ROOT_RAW" ]]; then
+    SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    ROOT_RAW="$(cd "$SELF_DIR/../.." && pwd)"
+  fi
 fi
 ROOT="$(to_posix_path "$ROOT_RAW")"
 TARGET="$ROOT/.src/scripts/$SCRIPT_NAME"
+
+# v2: Ensure PENSIEVE_PROJECT_ROOT is set for downstream scripts.
+# In hook context, CLAUDE_PROJECT_DIR is provided by Claude Code.
+# Without it, scripts inside the user-level skill root cannot resolve
+# the actual project directory.
+if [[ -z "${PENSIEVE_PROJECT_ROOT:-}" && -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+  export PENSIEVE_PROJECT_ROOT="$(to_posix_path "$CLAUDE_PROJECT_DIR")"
+fi
+export PENSIEVE_SKILL_ROOT="$ROOT"
 
 [[ -f "$TARGET" ]] || {
   echo "Hook target not found: $TARGET" >&2

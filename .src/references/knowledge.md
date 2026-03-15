@@ -27,7 +27,7 @@ If it is "must be done this way," write it in `maxims/`.
 ## Storage location
 
 ```text
-<skill-root>/knowledge/{name}/
+<project>/.pensieve/knowledge/{name}/
 ├── content.md
 └── source/        # optional
 ```

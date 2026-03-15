@@ -1,5 +1,5 @@
 ---
-description: Read-only scan of the current user data root directory. Checks frontmatter, links, directory structure, critical seed files, and auto memory alignment. Outputs a fixed-format report.
+description: Read-only scan of the current project's .pensieve/ user data directory. Checks frontmatter, links, directory structure, critical seed files, and auto-memory alignment, then outputs a fixed-format report.
 ---
 
 # Doctor Tool
@@ -15,14 +15,16 @@ description: Read-only scan of the current user data root directory. Checks fron
 
 ## Standard execution
 
+> All `.src/` paths below are relative to the skill root (`$PENSIEVE_SKILL_ROOT`, typically `~/.claude/skills/pensieve/`).
+
 ```bash
-bash .src/scripts/run-doctor.sh --strict
+bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/run-doctor.sh" --strict
 ```
 
 Doctor only maintains:
 
-- `SKILL.md` generated at the root directory (lifecycle state + Graph)
-- Runtime graph outputs such as `.state/pensieve-user-data-graph.md`
+- `<project>/.pensieve/state.md` (lifecycle state + Graph)
+- Runtime graph output such as `.pensieve/.state/pensieve-user-data-graph.md`
 - Claude auto memory `~/.claude/projects/<project>/memory/MEMORY.md`
 
 It will not modify your business code.

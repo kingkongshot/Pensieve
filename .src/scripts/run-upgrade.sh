@@ -16,7 +16,7 @@ Usage:
   run-upgrade.sh [options]
 
 Options:
-  --state-dir <path>        Runtime state dir. Default: <project>/.state
+  --state-dir <path>        Runtime state dir. Default: <project>/.pensieve/.state
   --report <path>           Upgrade markdown report. Default: <state-dir>/pensieve-upgrade-report.md
   --summary-json <path>     Upgrade summary json. Default: <state-dir>/pensieve-upgrade-summary.json
   --skip-version-check      Skip git pull and only refresh local reports
@@ -68,11 +68,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-PROJECT_ROOT="$(to_posix_path "$(project_root "$SCRIPT_DIR")")"
+PROJECT_ROOT="$(project_root)" || exit 1
+PROJECT_ROOT="$(to_posix_path "$PROJECT_ROOT")"
+validate_project_root "$PROJECT_ROOT"
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
 
 if [[ -z "$STATE_DIR" ]]; then
-  STATE_DIR="$(state_root "$SCRIPT_DIR")"
+  STATE_DIR="$(state_root)"
 fi
 STATE_DIR="$(to_posix_path "$STATE_DIR")"
 if [[ "$STATE_DIR" != /* ]]; then
@@ -80,24 +82,13 @@ if [[ "$STATE_DIR" != /* ]]; then
 fi
 
 resolve_path() {
-  local maybe_path="$1"
-  local default_path="$2"
-  local out
-  out="$maybe_path"
-  if [[ -z "$out" ]]; then
-    out="$default_path"
-  fi
-  out="$(to_posix_path "$out")"
-  if [[ "$out" != /* ]]; then
-    out="$PROJECT_ROOT/$out"
-  fi
-  printf '%s\n' "$out"
+  resolve_output_path "$1" "$2" "$PROJECT_ROOT"
 }
 
 REPORT="$(resolve_path "$REPORT" "$STATE_DIR/pensieve-upgrade-report.md")"
 SUMMARY_JSON="$(resolve_path "$SUMMARY_JSON" "$STATE_DIR/pensieve-upgrade-summary.json")"
 VERSION_LOG="$STATE_DIR/pensieve-upgrade-version-check.log"
-MAINTAIN_SCRIPT="$SCRIPT_DIR/maintain-project-skill.sh"
+MAINTAIN_SCRIPT="$SCRIPT_DIR/maintain-project-state.sh"
 
 ensure_state_dir "$STATE_DIR" >/dev/null
 mkdir -p "$(dirname "$REPORT")" "$(dirname "$SUMMARY_JSON")"
@@ -123,13 +114,24 @@ handle_upgrade() {
   fi
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    echo "[dry-run] git -C $SKILL_ROOT pull --ff-only" >>"$VERSION_LOG"
+    echo "[dry-run] git -C $SKILL_ROOT pull --ff-only (fallback: fetch+reset)" >>"$VERSION_LOG"
     UPDATE_STRATEGY="git-pull"
     return 0
   fi
 
-  git -C "$SKILL_ROOT" pull --ff-only >>"$VERSION_LOG" 2>&1
-  UPDATE_STRATEGY="git-pull"
+  # Try fast-forward first; if remote was force-pushed, fall back to fetch+reset.
+  # This is safe because the skill root contains only tracked system files —
+  # user data lives at <project>/.pensieve/, not here.
+  if git -C "$SKILL_ROOT" pull --ff-only >>"$VERSION_LOG" 2>&1; then
+    UPDATE_STRATEGY="git-pull-ff"
+  else
+    echo "[info] fast-forward failed, falling back to fetch+reset" >>"$VERSION_LOG"
+    local branch
+    branch="$(git -C "$SKILL_ROOT" rev-parse --abbrev-ref HEAD)"
+    git -C "$SKILL_ROOT" fetch origin >>"$VERSION_LOG" 2>&1
+    git -C "$SKILL_ROOT" reset --hard "origin/$branch" >>"$VERSION_LOG" 2>&1
+    UPDATE_STRATEGY="git-fetch-reset"
+  fi
 }
 
 if ! handle_upgrade; then
@@ -186,7 +188,7 @@ lines = [
     "## 2) Next Steps (manual)",
     "- Run doctor manually after upgrade:",
     "```bash",
-    "bash .src/scripts/run-doctor.sh --strict",
+    'bash "$PENSIEVE_SKILL_ROOT/.src/scripts/run-doctor.sh" --strict',
     "```",
     "",
     "## 3) Files",

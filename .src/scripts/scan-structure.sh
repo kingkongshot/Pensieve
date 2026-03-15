@@ -68,12 +68,13 @@ case "$FORMAT" in
     ;;
 esac
 
-PROJECT_ROOT="$(to_posix_path "$(project_root "$SCRIPT_DIR")")"
+PROJECT_ROOT="$(project_root)" || exit 1
+PROJECT_ROOT="$(to_posix_path "$PROJECT_ROOT")"
 if [[ -z "$ROOT" ]]; then
-  ROOT="$(user_data_root "$SCRIPT_DIR")"
+  ROOT="$(user_data_root)"
 fi
 ROOT="$(to_posix_path "$ROOT")"
-AUTO_MEMORY_FILE="$(to_posix_path "$(auto_memory_file "$SCRIPT_DIR")")"
+AUTO_MEMORY_FILE="$(to_posix_path "$(auto_memory_file)")"
 
 if [[ "$OUTPUT" != "-" ]]; then
   OUTPUT="$(to_posix_path "$OUTPUT")"
@@ -160,13 +161,6 @@ for item in schema.get("critical_files", []):
 
 legacy_project_paths = [project_root / p for p in schema.get("legacy_paths", {}).get("project", [])]
 legacy_user_paths = [home_dir / p for p in schema.get("legacy_paths", {}).get("user", [])]
-legacy_graph_patterns = [str(x) for x in schema.get("legacy_graph_patterns", [])]
-legacy_readme_re = re.compile(str(schema.get("legacy_readme_regex", r"(?i)^readme(?:.*\.md)?$")))
-finding_templates = schema.get("findings", {}) if isinstance(schema.get("findings"), dict) else {}
-# Detect stale references to old skill paths or hidden template paths.
-legacy_knowledge_path_re = re.compile(
-    r"(?:(?<!\\.claude/)skills/pensieve/knowledge/|\\.claude/skills/pensieve/knowledge/|\\.src/templates/knowledge/)"
-)
 system_skill_file = skill_root / "SKILL.md"
 memory_start_marker = str(schema.get("memory", {}).get("start_marker", "<!-- pensieve:auto-memory:start -->"))
 memory_end_marker = str(schema.get("memory", {}).get("end_marker", "<!-- pensieve:auto-memory:end -->"))
@@ -203,43 +197,6 @@ def add_finding(
     )
 
 
-def finding_text(
-    finding_id: str,
-    field: str,
-    fallback: str = "",
-    **kwargs: str,
-) -> str:
-    text = fallback
-    entry = finding_templates.get(finding_id)
-    if isinstance(entry, dict):
-        value = entry.get(field)
-        if isinstance(value, str) and value:
-            text = value
-    if kwargs:
-        try:
-            return text.format(**kwargs)
-        except Exception:  # noqa: BLE001
-            return text
-    return text
-
-
-def add_finding_by_id(
-    finding_id: str,
-    severity: str,
-    category: str,
-    path: Path | str,
-    **kwargs: str,
-) -> None:
-    add_finding(
-        finding_id,
-        severity,
-        category,
-        path,
-        finding_text(finding_id, "message", "", **kwargs),
-        finding_text(finding_id, "recommendation", "Fix as recommended, then re-run doctor", **kwargs),
-    )
-
-
 def same_path(a: Path, b: Path) -> bool:
     try:
         return a.resolve() == b.resolve()
@@ -251,27 +208,12 @@ def read_text_normalized(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n")
 
 
-def has_legacy_knowledge_path_reference(text: str) -> bool:
-    if "<SYSTEM_SKILL_ROOT>/knowledge/" in text:
-        return True
-    return bool(legacy_knowledge_path_re.search(text))
-
-
 def normalize_context_link_line(line: str) -> str:
-    m = re.match(r"^(\s*-\s*(?:基于|导致|相关|based-on|leads-to|related)[:：])\s*.*$", line)
-    if not m:
-        return line.rstrip()
-    return f"{m.group(1)} <context-value>"
+    return core_module.normalize_context_link_line(line)
 
 
 def normalize_critical_file_content(path: Path, text: str) -> str:
-    rel = path.as_posix()
-    basename = Path(rel).name
-    if basename in ("run-when-reviewing-code.md", "pipeline.run-when-reviewing-code.md",
-                     "run-when-committing.md", "pipeline.run-when-committing.md"):
-        lines = [normalize_context_link_line(line) for line in text.split("\n")]
-        return "\n".join(lines).rstrip() + "\n"
-    return text
+    return core_module.normalize_critical_file_content(path.name, text)
 
 
 def has_memory_guidance(block: str) -> bool:
@@ -298,20 +240,6 @@ def load_json(path: Path) -> tuple[dict | None, str | None]:
     return data, None
 
 
-def load_system_skill_description(path: Path) -> str | None:
-    if not path.is_file():
-        return None
-    text = read_text_normalized(path)
-    m = re.search(r"^---\n(.*?)\n---\n?", text, flags=re.MULTILINE | re.DOTALL)
-    if not m:
-        return None
-    for line in m.group(1).splitlines():
-        if line.startswith("description:"):
-            value = line.split(":", 1)[1].strip()
-            return value if value else None
-    return None
-
-
 def extract_pensieve_memory_block(text: str) -> str:
     pattern = re.compile(
         re.escape(memory_start_marker) + r"(.*?)" + re.escape(memory_end_marker),
@@ -324,137 +252,105 @@ def extract_pensieve_memory_block(text: str) -> str:
 
 
 if not root.exists():
-    add_finding_by_id(
-        "STR-001",
-        "MUST_FIX",
-        "missing_root",
-        root,
+    add_finding(
+        "STR-001", "MUST_FIX", "missing_root", root,
+        "User data root directory does not exist.",
+        "Run init to initialize the Pensieve project in this repository.",
     )
 
-skill_file = root / "SKILL.md"
+skill_file = system_skill_file
 if not skill_file.is_file():
-    add_finding_by_id(
-        "STR-003",
-        "MUST_FIX",
-        "missing_skill_file",
-        skill_file,
+    add_finding(
+        "STR-003", "MUST_FIX", "missing_skill_file", skill_file,
+        "SKILL.md not found in skill root directory.",
+        "Ensure the skill is properly installed at ~/.claude/skills/pensieve/ with a tracked SKILL.md.",
+    )
+
+state_file = root / "state.md"
+if root.exists() and not state_file.is_file():
+    add_finding(
+        "STR-004", "MUST_FIX", "missing_state_file", state_file,
+        "Project state.md does not exist.",
+        "Run init to generate .pensieve/state.md.",
     )
 
 for d in required_dirs:
     p = root / d
     if not p.is_dir():
-        add_finding_by_id(
-            "STR-002",
-            "MUST_FIX",
-            "missing_directory",
-            p,
-            dir=d,
+        add_finding(
+            "STR-002", "MUST_FIX", "missing_directory", p,
+            f"Missing required directory: {d}/",
+            "Run init or migrate to restore the directory structure, then re-run doctor.",
         )
 
+# Check for legacy v1 directories (existence only, not contents).
 for p in legacy_project_paths + legacy_user_paths:
     if same_path(p, skill_root):
         continue
-    if p.exists():
-        add_finding_by_id(
-            "STR-101",
-            "MUST_FIX",
-            "deprecated_path",
-            p,
+    if p.is_dir():
+        add_finding(
+            "STR-101", "MUST_FIX", "deprecated_path", p,
+            f"Legacy v1 data directory found: {p}",
+            "Run migrate to automatically move user data into .pensieve/ and clean up legacy paths.",
         )
-
-if root.is_dir():
-    for pattern in legacy_graph_patterns:
-        for matched in sorted(root.glob(pattern)):
-            if not matched.is_file():
-                continue
-            add_finding_by_id(
-                "STR-111",
-                "MUST_FIX",
-                "legacy_graph_file",
-                matched,
-            )
-
-for d in required_dirs:
-    cat_dir = root / d
-    if not cat_dir.is_dir():
-        continue
-    for item in sorted(cat_dir.iterdir()):
-        if not item.is_file():
-            continue
-        if legacy_readme_re.match(item.name):
-            add_finding_by_id(
-                "STR-121",
-                "MUST_FIX",
-                "legacy_spec_readme_copy",
-                item,
-            )
 
 for target, template in critical_files:
     if not target.is_file():
-        add_finding_by_id(
-            "STR-201",
-            "MUST_FIX",
-            "missing_critical_file",
-            target,
+        add_finding(
+            "STR-201", "MUST_FIX", "missing_critical_file", target,
+            "Missing critical seed file.",
+            "Run migrate to force-align critical files.",
         )
         continue
     if not template.is_file():
-        add_finding_by_id(
-            "STR-901",
-            "MUST_FIX",
-            "scanner_template_missing",
-            template,
-            detail="Critical file template missing, cannot verify critical file alignment",
+        add_finding(
+            "STR-901", "MUST_FIX", "scanner_template_missing", template,
+            "Template required for scanning is missing, cannot complete verification: Critical file template missing, cannot verify critical file alignment",
+            "Fix the skill installation or update to a complete version, then retry.",
         )
         continue
     target_text = normalize_critical_file_content(target, read_text_normalized(target))
     template_text = normalize_critical_file_content(template, read_text_normalized(template))
     if target_text != template_text:
-        add_finding_by_id(
-            "STR-202",
-            "MUST_FIX",
-            "critical_file_drift",
-            target,
+        add_finding(
+            "STR-202", "MUST_FIX", "critical_file_drift", target,
+            "Critical file body content differs from template (context link value differences ignored).",
+            "Run migrate to back up and replace, restoring critical workflow file body alignment with the template.",
         )
 
-review_pipeline = root / "pipelines" / "run-when-reviewing-code.md"
-if review_pipeline.is_file():
-    txt = read_text_normalized(review_pipeline)
-    if has_legacy_knowledge_path_reference(txt):
-        add_finding_by_id(
-            "STR-301",
-            "MUST_FIX",
-            "review_pipeline_path_drift",
-            review_pipeline,
-        )
-
-system_skill_description = load_system_skill_description(system_skill_file)
+system_skill_description = core_module.load_skill_description(system_skill_file)
 if system_skill_description is None:
-    add_finding_by_id(
-        "STR-901",
-        "MUST_FIX",
-        "scanner_template_missing",
-        system_skill_file,
-        detail="System skill description missing, cannot verify MEMORY.md Pensieve guidance block",
+    add_finding(
+        "STR-901", "MUST_FIX", "scanner_template_missing", system_skill_file,
+        "Template required for scanning is missing, cannot complete verification: System skill description missing, cannot verify MEMORY.md Pensieve guidance block",
+        "Fix the skill installation or update to a complete version, then retry.",
     )
 else:
     if not memory_file.is_file():
-        add_finding_by_id(
-            "STR-501",
-            "MUST_FIX",
-            "missing_memory_file",
-            memory_file,
+        add_finding(
+            "STR-501", "MUST_FIX", "missing_memory_file", memory_file,
+            "Claude Code auto memory entry MEMORY.md is missing.",
+            "Run init/migrate/doctor to trigger auto memory creation, or manually add the Pensieve guidance block to ~/.claude/projects/<project>/memory/MEMORY.md.",
         )
     else:
         memory_text = read_text_normalized(memory_file)
         memory_block = extract_pensieve_memory_block(memory_text)
         if system_skill_description not in memory_block or not has_memory_guidance(memory_block):
-            add_finding_by_id(
-                "STR-502",
-                "MUST_FIX",
-                "memory_content_drift",
-                memory_file,
+            add_finding(
+                "STR-502", "MUST_FIX", "memory_content_drift", memory_file,
+                "MEMORY.md is missing the Pensieve description, or its content is not aligned with the skill description.",
+                "Run init/migrate/doctor to trigger auto memory alignment, ensuring MEMORY.md matches the SKILL.md description and includes the pensieve skill guidance.",
             )
+
+# Check for inline graph in state.md (should be a reference pointer, not full content).
+if state_file.is_file():
+    state_text = read_text_normalized(state_file)
+    if "```mermaid" in state_text:
+        add_finding(
+            "STR-601", "SHOULD_FIX", "state_inline_graph", state_file,
+            "state.md contains inline mermaid graph. Graph should be a reference to .state/pensieve-user-data-graph.md.",
+            "Run migrate or doctor to regenerate state.md with graph reference pointer.",
+        )
 
 must_fix = sum(1 for f in findings if f.severity == "MUST_FIX")
 should_fix = sum(1 for f in findings if f.severity == "SHOULD_FIX")
@@ -470,13 +366,11 @@ flags = {
     "has_missing_root": any(f.finding_id == "STR-001" for f in findings),
     "has_missing_directories": any(f.finding_id == "STR-002" for f in findings),
     "has_deprecated_paths": any(f.finding_id == "STR-101" for f in findings),
-    "has_legacy_graph_files": any(f.finding_id == "STR-111" for f in findings),
-    "has_legacy_spec_readme_copies": any(f.finding_id == "STR-121" for f in findings),
     "has_missing_critical_files": any(f.finding_id == "STR-201" for f in findings),
     "has_critical_file_drift": any(f.finding_id == "STR-202" for f in findings),
-    "has_review_pipeline_path_drift": any(f.finding_id == "STR-301" for f in findings),
     "has_missing_memory_file": any(f.finding_id == "STR-501" for f in findings),
     "has_memory_content_drift": any(f.finding_id == "STR-502" for f in findings),
+    "has_state_inline_graph": any(f.finding_id == "STR-601" for f in findings),
 }
 
 report = {

@@ -2,24 +2,27 @@
 
 ## Root Rules
 
-1. `.src/` is the system file directory; do not write user data or runtime state into it.
-2. `.state/` is the hidden runtime state directory; reports, markers, caches, and other ephemeral data go here.
-3. `maxims/decisions/knowledge/pipelines` are user data directories; besides these, only the root-level generated `SKILL.md` can be rewritten by maintenance scripts.
-4. Confirm before executing. Do not automatically run long processes unless the user explicitly requests it.
-5. Read specs before writing data: before writing a maxim/decision/knowledge/pipeline, read the corresponding spec in `.src/references/`.
-6. Keep links connected: `decision/pipeline` must have at least one `[[...]]` link.
+1. `.src/` is the system file directory (located at the skill root); do not write user data or runtime state into it.
+2. `.pensieve/.state/` is the hidden runtime state directory; write reports, markers, caches, and other transient data here.
+3. `.pensieve/{maxims,decisions,knowledge,pipelines}` are user data directories; besides these, only `.pensieve/state.md` may be rewritten by maintenance scripts.
+4. `SKILL.md` at the skill root is a static, tracked file — do not modify it.
+5. Confirm before executing. Do not automatically run long processes unless the user explicitly requests it.
+6. Read the spec before writing data: before writing a maxim/decision/knowledge/pipeline, read the corresponding spec in `.src/references/`.
+7. Keep links connected: every `decision/pipeline` must have at least one `[[...]]` link.
 
 ## Path conventions
 
+- System skill root: `~/.claude/skills/pensieve/`
 - Tool specs: `.src/tools/*.md`
 - Execution scripts: `.src/scripts/*.sh`
 - Hidden templates: `.src/templates/**`
-- Hidden runtime state: `.state/**`
+- Project user data: `<project>/.pensieve/`
+- Hidden runtime state: `<project>/.pensieve/.state/**`
 - User data:
-  - `maxims/*.md`
-  - `decisions/*.md`
-  - `knowledge/*/content.md`
-  - `pipelines/run-when-*.md`
+  - `.pensieve/maxims/*.md`
+  - `.pensieve/decisions/*.md`
+  - `.pensieve/knowledge/*/content.md`
+  - `.pensieve/pipelines/run-when-*.md`
 
 ## Semantic layers
 

@@ -1,5 +1,5 @@
 ---
-description: Initialize the current user data root directory and populate seed files. Perform baseline exploration and code review, producing settleable candidates. Idempotent; does not overwrite existing user data.
+description: Initialize the current project's .pensieve/ user data directory and provision seed files. Performs baseline exploration and code review, producing candidates for persistence. Idempotent; does not overwrite existing user data.
 ---
 
 # Init Tool
@@ -8,12 +8,12 @@ description: Initialize the current user data root directory and populate seed f
 
 ## Use when
 
-- First time onboarding to Pensieve
-- User needs post-install initialization or re-populating the default structure after reinstall
-- Missing base directories: `maxims/decisions/knowledge/pipelines`
+- First time integrating Pensieve into a project
+- User needs post-install initialization or post-reinstall default structure provisioning
+- Missing base directories: `<project>/.pensieve/{maxims,decisions,knowledge,pipelines}`
 - Missing default pipeline or taste-review knowledge
 
-If the user first asks "how to install/reinstall Pensieve", read `.src/references/skill-lifecycle.md` first, then execute this tool.
+If the user first asks "how to install/reinstall Pensieve", read `.src/references/skill-lifecycle.md` first, then run this tool.
 
 ## Failure fallback
 
@@ -22,17 +22,19 @@ If the user first asks "how to install/reinstall Pensieve", read `.src/reference
 
 ## Standard execution
 
+> All `.src/` paths below are relative to the skill root (`$PENSIEVE_SKILL_ROOT`, typically `~/.claude/skills/pensieve/`).
+
 ```bash
-bash .src/scripts/init-project-data.sh
+bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/init-project-data.sh"
 ```
 
 Then:
 
-1. Read `pipelines/run-when-reviewing-code.md`
-2. Perform an exploration based on recent commits and hot files
-3. Produce a "settleable candidates list", but do not auto-write
-4. Finally remind the user to manually run doctor:
+1. Read `<project>/.pensieve/pipelines/run-when-reviewing-code.md`
+2. Explore based on recent commits and hot files
+3. Produce a "candidates for persistence" list, but do not write automatically
+4. Finally, remind the user to run doctor manually:
 
 ```bash
-bash .src/scripts/run-doctor.sh --strict
+bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/run-doctor.sh" --strict
 ```

@@ -15,7 +15,7 @@ If the problem is mainly "scattered knowledge" or "unclear boundaries," write a 
 ## Storage location
 
 ```text
-<skill-root>/pipelines/
+<project>/.pensieve/pipelines/
 └── run-when-*.md
 ```
 

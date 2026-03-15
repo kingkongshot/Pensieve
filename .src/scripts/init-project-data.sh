@@ -1,10 +1,9 @@
 #!/bin/bash
-# Initialize the current pensieve user data root directory.
+# Initialize the current project's Pensieve user data directory.
 #
-# `.src/`, `agents/`, `SKILL.md` are git-tracked system files.
-# `SKILL.md` is locally overwritten by maintain-project-skill.sh.
-# User data (maxims/decisions/knowledge/pipelines) is ignored by .gitignore
-# and does not participate in git updates.
+# System files (SKILL.md, .src/, agents/) are at the user-level skill root.
+# User data (maxims/decisions/knowledge/pipelines) lives at <project>/.pensieve/.
+# Runtime state lives at <project>/.pensieve/.state/.
 #
 # Idempotent — safe to run repeatedly.
 
@@ -24,18 +23,28 @@ is_readme_file() {
   esac
 }
 
-DATA_ROOT="$(user_data_root "$SCRIPT_DIR")"
-STATE_ROOT="$(ensure_state_dir "$(state_root "$SCRIPT_DIR")")"
+# Guard against running from outside a real project directory.
+_PROJECT_ROOT="$(project_root)"
+validate_project_root "$_PROJECT_ROOT" || exit 1
+
+DATA_ROOT="$(user_data_root)"
+STATE_ROOT="$(ensure_state_dir "$(state_root)")"
 
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
 TEMPLATES_ROOT="$SKILL_ROOT/.src/templates"
 SYSTEM_KNOWLEDGE_ROOT="$SKILL_ROOT/.src/templates/knowledge"
-PROJECT_SKILL_SCRIPT="$SKILL_ROOT/.src/scripts/maintain-project-skill.sh"
+PROJECT_STATE_SCRIPT="$SKILL_ROOT/.src/scripts/maintain-project-state.sh"
 
 mkdir -p "$DATA_ROOT"/{maxims,decisions,knowledge,pipelines}
 
-ensure_ignore_all "$SKILL_ROOT/.src"
-ensure_ignore_all "$SKILL_ROOT/agents"
+# Create .pensieve/.gitignore (only ignore .state/)
+PENSIEVE_GITIGNORE="$DATA_ROOT/.gitignore"
+if [[ ! -f "$PENSIEVE_GITIGNORE" ]]; then
+  cat > "$PENSIEVE_GITIGNORE" <<'EOF'
+# Runtime state (reports, markers, caches, graph snapshots)
+.state/
+EOF
+fi
 
 TEMPLATE_MAXIMS_DIR="$TEMPLATES_ROOT/maxims"
 if [[ -d "$TEMPLATE_MAXIMS_DIR" ]]; then
@@ -86,9 +95,9 @@ echo "  - knowledge/*: seeded $KNOWLEDGE_SEEDED_COUNT new file(s)"
 echo "  - pipelines/*: seeded $PIPELINE_SEEDED_COUNT new file(s)"
 echo "  - runtime state: $STATE_ROOT"
 
-if [[ -x "$PROJECT_SKILL_SCRIPT" ]]; then
-  if ! bash "$PROJECT_SKILL_SCRIPT" --event install --note "seeded project data via init-project-data.sh"; then
-    echo "⚠️  Generated SKILL update skipped: failed to run maintain-project-skill.sh" >&2
+if [[ -f "$PROJECT_STATE_SCRIPT" ]]; then
+  if ! bash "$PROJECT_STATE_SCRIPT" --event install --note "seeded project data via init-project-data.sh"; then
+    echo "⚠️  Generated state update skipped: failed to run maintain-project-state.sh" >&2
   fi
 fi
 

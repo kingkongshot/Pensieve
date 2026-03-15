@@ -50,7 +50,7 @@ case "$FORMAT" in
 esac
 
 if [[ -z "$ROOT" ]]; then
-  ROOT="$(user_data_root "$SCRIPT_DIR")"
+  ROOT="$(user_data_root)"
 fi
 ROOT="$(to_posix_path "$ROOT")"
 

@@ -1,5 +1,5 @@
 ---
-description: Structural migration and legacy cleanup. Only handles old path migration, critical seed file alignment, and historical remnant cleanup; does not perform version upgrades or doctor grading.
+description: Migration tool. Automatically migrates legacy user data to the v2 directory structure and aligns critical seed files. Does not perform version upgrades or doctor grading.
 ---
 
 # Migrate Tool
@@ -8,17 +8,20 @@ description: Structural migration and legacy cleanup. Only handles old path migr
 
 ## Use when
 
-- Legacy path remnants exist under the skill root directory
-- Doctor reports critical file missing, critical file drift, or old graph remnants
+- Migrating from v1 (project-level install) to v2 (user-level system + project-level data)
+- Doctor reports critical file missing or critical file drift
+- Need to fill in directory structure or re-align seed files
 
 ## Standard execution
 
+> All `.src/` paths below are relative to the skill root (`$PENSIEVE_SKILL_ROOT`, typically `~/.claude/skills/pensieve/`).
+
 ```bash
-bash .src/scripts/run-migrate.sh
+bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/run-migrate.sh"
 ```
 
 Optional dry-run:
 
 ```bash
-bash .src/scripts/run-migrate.sh --dry-run
+bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/run-migrate.sh" --dry-run
 ```
