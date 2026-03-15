@@ -65,7 +65,16 @@ Pensieve 不只是存文档——它让 agent 的每一次对话都更精准：
 | **HOW** | pipeline | 这个流程应该怎么跑？ | 视情况 |
 | **IS** | knowledge | 当前事实是什么？ | 否——可验证的系统事实 |
 
-层与层之间通过 `基于 / 导致 / 相关` 三类语义链接形成图谱。
+层与层之间通过 `基于 / 导致 / 相关` 三类语义链接形成图谱。随着使用积累，Pensieve 自动构建项目知识的有向图：
+
+<img src="docs/graph-overview.png" width="100%" alt="Pensieve knowledge graph overview" />
+
+<details>
+<summary><b>放大细节</b></summary>
+
+<img src="docs/graph-detail.png" width="100%" alt="Pensieve knowledge graph detail" />
+
+</details>
 
 详细规范见 `.src/references/` 下的 [maxims.md](.src/references/maxims.md)、[decisions.md](.src/references/decisions.md)、[knowledge.md](.src/references/knowledge.md)、[pipelines.md](.src/references/pipelines.md)。
 
@@ -280,6 +289,10 @@ bash <skill-path>/.src/scripts/run-doctor.sh --strict
 - **先读规范再写数据** — 创建任何用户数据前先读 `.src/references/` 的格式规范
 
 </details>
+
+## 交流
+
+<img src="docs/QRCode.png" width="200" alt="QR Code" />
 
 ## 许可证
 
