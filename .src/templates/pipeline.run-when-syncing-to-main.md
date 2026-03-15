@@ -7,7 +7,7 @@ created: 2026-03-15
 updated: 2026-03-15
 tags: [pensieve, pipeline, sync, translation]
 name: run-when-syncing-to-main
-description: 将 experimental/zh 分支的变更同步到 main（英文分支）。从 main 建分支 → merge 源分支（保留贡献者历史）→ 翻译中文为英文 → PR → merge → 清理临时分支。触发词：sync to main, 同步到 main。
+description: Sync changes from the experimental/zh branch to main (English branch). Create branch from main → merge source branch (preserving contributor history) → translate Chinese to English → PR → merge → clean up temporary branch. Trigger phrases: sync to main.
 
 stages: [tasks]
 gate: manual
@@ -15,12 +15,12 @@ gate: manual
 
 # Sync to Main Pipeline
 
-将 experimental 或 zh 分支的变更同步到 main（英文主干）。核心约束：main 不得包含中文内容，同时保留原始贡献者的 commit 历史。
+Sync changes from the experimental or zh branch to main (English trunk). Core constraint: main must not contain Chinese content, while preserving the original contributors' commit history.
 
-**语言政策**：
-- `zh` — 中文优先，快速迭代
-- `main` — 纯英文，发布级
-- 永远不要直接 merge zh/experimental 到 main（会带入中文）
+**Language Policy**:
+- `zh` — Chinese-first, rapid iteration
+- `main` — English-only, release-grade
+- Never merge zh/experimental directly into main (it would bring in Chinese)
 
 **Context Links (at least one)**:
 - Based on: none
@@ -28,101 +28,101 @@ gate: manual
 
 ---
 
-## Task 1: 确认范围
+## Task 1: Confirm Scope
 
-**目标**：确认要同步的源分支和变更范围
+**Goal**: Confirm the source branch and scope of changes to sync
 
-**步骤**：
-1. 确认源分支（通常是 `experimental`，有时是 `zh`）
-2. 运行 `git diff --stat main..<source-branch>` 查看差异
-3. 分类文件：
-   - **脚本/代码**（`.sh`、`.py`、`.json`）：通常已英文或双语兼容，直接同步
-   - **文档**（`.md`）：需要翻译
-   - **删除的文件**：直接同步
-   - **二进制/配置**：直接同步
-4. 向用户汇报范围，确认是否全部同步
+**Steps**:
+1. Confirm the source branch (usually `experimental`, sometimes `zh`)
+2. Run `git diff --stat main..<source-branch>` to view the diff
+3. Categorize files:
+   - **Scripts/Code** (`.sh`, `.py`, `.json`): Usually already in English or bilingual-compatible, sync directly
+   - **Documentation** (`.md`): Needs translation
+   - **Deleted files**: Sync directly
+   - **Binary/Config**: Sync directly
+4. Report the scope to the user and confirm whether to sync everything
 
-**完成标准**：用户确认同步范围
+**Completion Criteria**: User confirms sync scope
 
 ---
 
-## Task 2: 创建分支并 merge
+## Task 2: Create Branch and Merge
 
-**目标**：从 main 创建 sync 分支，merge 源分支以保留贡献者历史
+**Goal**: Create a sync branch from main and merge the source branch to preserve contributor history
 
-**步骤**：
+**Steps**:
 1. `git checkout main && git pull kingkongshot main`
 2. `git checkout -b sync/zh-to-main-<date>[-topic]`
 3. `git merge <source-branch> -X theirs --no-edit`
-   - `-X theirs`：冲突时取源分支版本（源分支是最新的）
-   - 如果只有少量文件变更，也可以 `git checkout <source-branch> -- <file>` 逐文件取
-4. 确认 merge 成功，无遗留冲突
+   - `-X theirs`: On conflicts, take the source branch version (source branch is the latest)
+   - If only a few files changed, you can also use `git checkout <source-branch> -- <file>` to pick files individually
+4. Confirm merge succeeded with no remaining conflicts
 
-**完成标准**：sync 分支包含源分支的完整 commit 历史，无冲突
-
----
-
-## Task 3: 翻译
-
-**目标**：将所有中文内容翻译为英文
-
-**翻译规则**：
-- 翻译所有中文文本为英文
-- 保持代码、路径、文件引用、变量名不变
-- 保持 markdown 结构、frontmatter、HTML 标签不变
-- 双语 regex 模式不变（如 `探索减负|Exploration Reduction`）
-- `git clone -b zh` 改为 `git clone -b main`
-- `[English README](...main...)` 改为 `[中文 README](...zh...)`
-- 脚本中的中文输出字符串需翻译（如 `maintain-project-state.sh` 中的引用文本）
-
-**步骤**：
-1. `grep -rln '[一-龥]'` 找出所有含中文的文件
-2. 排除已知的双语 regex 模式（在脚本中故意保留的）
-3. 对需要翻译的文件，按批次并行翻译（使用 Agent 工具）
-4. 翻译完成后再次 `grep '[一-龥]'` 验证，确保只剩语言切换链接等故意保留的中文
-
-**完成标准**：`grep -rn '[一-龥]'` 只返回故意保留的条目（如语言切换链接、双语 regex）
+**Completion Criteria**: Sync branch contains the complete commit history from the source branch, no conflicts
 
 ---
 
-## Task 4: PR 并合并
+## Task 3: Translation
 
-**目标**：创建 PR、merge、清理
+**Goal**: Translate all Chinese content to English
 
-**步骤**：
-1. 提交翻译变更：
+**Translation Rules**:
+- Translate all Chinese text to English
+- Keep code, paths, file references, and variable names unchanged
+- Keep markdown structure, frontmatter, and HTML tags unchanged
+- Keep bilingual regex patterns unchanged (e.g., `探索减负|Exploration Reduction`)
+- Change `git clone -b zh` to `git clone -b main`
+- Change `[English README](...main...)` to `[中文 README](...zh...)`
+- Translate Chinese output strings in scripts (e.g., quoted text in `maintain-project-state.sh`)
+
+**Steps**:
+1. Run `grep -rln '[一-龥]'` to find all files containing Chinese
+2. Exclude known bilingual regex patterns (intentionally kept in scripts)
+3. For files that need translation, translate in parallel batches (using the Agent tool)
+4. After translation, run `grep '[一-龥]'` again to verify only intentionally retained Chinese remains (e.g., language switch links, bilingual regex)
+
+**Completion Criteria**: `grep -rn '[一-龥]'` returns only intentionally retained entries (e.g., language switch links, bilingual regex)
+
+---
+
+## Task 4: PR and Merge
+
+**Goal**: Create PR, merge, and clean up
+
+**Steps**:
+1. Commit translation changes:
    ```bash
    git add -A
    git commit -m "translate: sync <source> to main (English)"
    ```
-   如有外部贡献者，添加 `Co-authored-by:` 标注
-2. 推送到远端：
+   If there are external contributors, add `Co-authored-by:` annotations
+2. Push to remote:
    ```bash
    git push kingkongshot sync/zh-to-main-<date>[-topic]
    ```
-3. 创建 PR：
+3. Create PR:
    ```bash
    gh pr create --repo kingkongshot/Pensieve --base main --head sync/zh-to-main-<date>[-topic] \
      --title "<title>" --body "<summary>"
    ```
-4. 合并 PR：
+4. Merge PR:
    ```bash
    gh pr merge <number> --repo kingkongshot/Pensieve --merge
    ```
-5. 清理临时分支：
+5. Clean up temporary branch:
    ```bash
    git checkout main && git pull kingkongshot main
    git branch -D sync/zh-to-main-<date>[-topic]
    git push kingkongshot --delete sync/zh-to-main-<date>[-topic]
    ```
 
-**完成标准**：PR 已合入 main，临时分支已删除（本地和远端）
+**Completion Criteria**: PR has been merged into main, temporary branch deleted (both local and remote)
 
 ---
 
 ## Failure Fallback
 
-1. **Merge 冲突无法自动解决**：用 `-X theirs` 重试，或逐文件 checkout 后翻译。
-2. **翻译后仍有残留中文**：手动检查并修复，常见遗漏点：脚本中的中文字符串、文档中的中文注释。
-3. **PR 创建失败（网络超时）**：重试 `gh pr create`，简化 body 内容。
-4. **推送被拒（auth 问题）**：`gh auth switch --user kingkongshot` 后重试。
+1. **Merge conflicts cannot be auto-resolved**: Retry with `-X theirs`, or checkout files individually and then translate.
+2. **Residual Chinese remains after translation**: Manually inspect and fix. Common missed spots: Chinese strings in scripts, Chinese comments in documentation.
+3. **PR creation fails (network timeout)**: Retry `gh pr create` with simplified body content.
+4. **Push rejected (auth issue)**: Run `gh auth switch --user kingkongshot` and retry.
