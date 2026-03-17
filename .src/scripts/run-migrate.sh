@@ -363,9 +363,15 @@ for target, template in critical_pairs:
 # --- Phase 6: Remove legacy directories ---
 
 for legacy in legacy_paths:
-    if same_path(legacy, root) or same_path(legacy, skill_root):
+    if same_path(legacy, root):
         continue
     if not legacy.exists():
+        continue
+    if same_path(legacy, skill_root):
+        summary["warnings"].append(
+            f"Legacy path {legacy} is the current skill_root and cannot be removed by itself. "
+            "Install Pensieve at user level (~/.claude/skills/pensieve), then re-run migrate."
+        )
         continue
     summary["removed_legacy_paths"].append(str(legacy))
     if not dry_run:

@@ -285,9 +285,15 @@ for d in required_dirs:
 
 # Check for legacy v1 directories (existence only, not contents).
 for p in legacy_project_paths + legacy_user_paths:
-    if same_path(p, skill_root):
+    if not p.is_dir():
         continue
-    if p.is_dir():
+    if same_path(p, skill_root):
+        add_finding(
+            "STR-101", "MUST_FIX", "deprecated_path", p,
+            f"Legacy v1 data directory found: {p} (current skill_root — switch to user-level installation)",
+            "Install Pensieve at user level (~/.claude/skills/pensieve), then re-run migrate to clean up this project-level legacy path.",
+        )
+    else:
         add_finding(
             "STR-101", "MUST_FIX", "deprecated_path", p,
             f"Legacy v1 data directory found: {p}",
