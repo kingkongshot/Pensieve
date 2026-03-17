@@ -206,7 +206,7 @@ if state_file.exists():
         "## Short-Term",
         [
             f"- Total: {st_total}",
-            f"- Due for triage: {st_due} (created > 7 days ago)",
+            f"- Due for refine: {st_due} (created 7+ days ago)",
             "",
         ],
     )
@@ -236,7 +236,7 @@ else:
 
 ## Short-Term
 - Total: {st_total}
-- Due for triage: {st_due} (created > 7 days ago)
+- Due for refine: {st_due} (created 7+ days ago)
 
 ## Graph
 
