@@ -252,6 +252,8 @@ if initialized and self_check_ok:
             "additionalContext": ctx,
         },
     }
+    if _st_due > 0:
+        payload["systemMessage"] = f"Pensieve: {_st_due} 条短期记忆待整理。运行 triage 处理。"
     print(json.dumps(payload, ensure_ascii=False))
     sys.exit(0)
 
