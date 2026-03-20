@@ -297,6 +297,12 @@ for d in optional_dirs:
 for p in legacy_project_paths + legacy_user_paths:
     if not p.is_dir():
         continue
+    # When a legacy path candidate resolves to skill_root AND skill_root
+    # is at the canonical user-level location (~/.claude/skills/pensieve),
+    # this is the actual installation, not a legacy remnant — skip it.
+    user_level_skill = home_dir / ".claude" / "skills" / "pensieve"
+    if same_path(p, skill_root) and same_path(skill_root, user_level_skill):
+        continue
     if same_path(p, skill_root):
         add_finding(
             "STR-101", "MUST_FIX", "deprecated_path", p,

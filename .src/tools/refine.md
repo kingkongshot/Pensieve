@@ -9,7 +9,7 @@ description: 精炼 Pensieve 知识库：通过五问决策审阅条目（triage
 ## Use when
 
 - session start 提醒有到期短期记忆
-- doctor 报告 `short_term_due_triage`
+- doctor 报告 `short_term_due_refine`
 - 用户请求 "整理" / "triage" / "去重" / "清理" / "发现关联"
 - 定期维护知识库质量
 

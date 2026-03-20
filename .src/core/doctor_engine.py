@@ -285,7 +285,7 @@ def run(argv: list[str]) -> int:
             )
         )
 
-    # Check for short-term items due for triage
+    # Check for short-term items due for refine
     short_term_dir = Path(user_root) / "short-term"
     if short_term_dir.is_dir():
         today_date = dt.date.today()
@@ -318,11 +318,11 @@ def run(argv: list[str]) -> int:
                     Finding(
                         finding_id=f"STM-{stm_idx:03d}",
                         severity="SHOULD_FIX",
-                        category="short_term_due_triage",
+                        category="short_term_due_refine",
                         path=rel_path,
                         rule_source=".src/references/short-term.md",
-                        message=f"Short-term item due for triage (created {m.group(1)}, {days_overdue}d overdue). Promote or delete.",
-                        recommendation="Run pensieve refine to triage short-term items",
+                        message=f"Short-term item due for refine (created {m.group(1)}, {days_overdue}d overdue). Promote or delete.",
+                        recommendation="Run refine tool to review short-term items",
                     )
                 )
 
