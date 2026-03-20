@@ -2,21 +2,21 @@
 
 | Tool | Responsible for | Not responsible for |
 |---|---|---|
-| `init` | 初始化项目 `.pensieve/` 目录、种子化默认内容、产出首轮探索输入 | 不直接写业务结论 |
-| `upgrade` | 刷新全局 skill 源码（`~/.claude/skills/pensieve/`） | 不做结构迁移，不给 PASS/FAIL |
-| `migrate` | 旧版本数据迁移、目录结构对齐、关键文件对齐 | 不更新版本，不给 PASS/FAIL |
-| `doctor` | 结构与格式体检，输出固定报告 | 不改业务代码 |
-| `self-improve` | 新建条目写入 `short-term/`，修改已有文件原地修改 | 不替代 init/migrate/doctor |
-| `refine` | 精炼知识库：triage 五问审阅 + compress 压缩抽象 | compress 产出的新条目走 short-term |
+| `init` | Initialize the project `.pensieve/` directory, seed default content, produce first-round exploration input | Does not write business conclusions directly |
+| `upgrade` | Refresh global skill source code (`~/.claude/skills/pensieve/`) | Does not perform structural migration; does not produce PASS/FAIL |
+| `migrate` | Migrate data from older versions, align directory structure, align key files | Does not update versions; does not produce PASS/FAIL |
+| `doctor` | Structural and format health check, output a fixed report | Does not modify business code |
+| `self-improve` | Create new entries in `short-term/`, edit existing files in place | Does not replace init/migrate/doctor |
+| `refine` | Refine the knowledge base: triage via five-question review + compress to abstract | New entries produced by compress go through short-term |
 
 ## Common redirects
 
 | User request | Correct tool |
 |---|---|
-| "怎么安装/重装 Pensieve" | 先读 `.src/references/skill-lifecycle.md`，再走 `init` |
-| "升级 Pensieve" | `upgrade` |
-| "怎么更新 Pensieve" | 先读 `.src/references/skill-lifecycle.md`，再走 `upgrade` |
-| "迁移到 v2/清理旧路径" | `migrate` |
-| "检查数据是否有问题" | `doctor` |
-| "把这次经验沉淀下来" | `self-improve` |
-| "整理/去重/压缩/精炼知识" | `refine` |
+| "How to install/reinstall Pensieve" | Read `.src/references/skill-lifecycle.md` first, then run `init` |
+| "Upgrade Pensieve" | `upgrade` |
+| "How to update Pensieve" | Read `.src/references/skill-lifecycle.md` first, then run `upgrade` |
+| "Migrate to v2 / clean up old paths" | `migrate` |
+| "Check if data has issues" | `doctor` |
+| "Capture this experience as knowledge" | `self-improve` |
+| "Organize / deduplicate / compress / refine knowledge" | `refine` |

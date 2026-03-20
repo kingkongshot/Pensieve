@@ -1,17 +1,17 @@
-# Short-Term（短期记忆）
+# Short-Term
 
-`short-term/` 是新知识的暂存区。`self-improve` 新建的条目默认进入这里。
+`short-term/` is the staging area for new knowledge. Entries created by `self-improve` land here by default.
 
-## 工作流
+## Workflow
 
-1. `self-improve` 新建条目 → 写入 `short-term/{type}/`
-2. 条目带 `created` 日期，默认 7 天后算到期
-3. 到期条目通过 session hook / doctor / commit pipeline 提醒
-4. 人工决定 promote（mv 到长期目录）或 delete
+1. `self-improve` creates an entry -> writes to `short-term/{type}/`
+2. Each entry carries a `created` date; it is considered expired after 7 days by default
+3. Expired entries trigger reminders via session hook / doctor / commit pipeline
+4. The user decides whether to promote (`mv` to the long-term directory) or delete
 
-## 存储位置
+## Storage location
 
-`short-term/` 镜像长期目录结构：
+`short-term/` mirrors the long-term directory structure:
 
 ```text
 <project>/.pensieve/short-term/
@@ -21,27 +21,27 @@
 └── pipelines/
 ```
 
-文件命名与对应长期目录一致（如 `decisions/{date}-{statement}.md`）。
+File naming follows the same convention as the corresponding long-term directory (e.g. `decisions/{date}-{statement}.md`).
 
-## 链接规则
+## Link rules
 
-`[[...]]` 链接**不含** `short-term/` 前缀：
+`[[...]]` links must **not** include the `short-term/` prefix:
 
 ```markdown
-- 基于：[[decisions/2026-03-16-foo]]     ✅
-- 基于：[[short-term/decisions/2026-03-16-foo]]  ❌
+- Based on: [[decisions/2026-03-16-foo]]     ✅
+- Based on: [[short-term/decisions/2026-03-16-foo]]  ❌
 ```
 
-图谱解析 short-term 内文件时 strip 前缀，与长期文件共享节点 ID。
-promote 时只需 `mv` 文件，零引用更新。
+When the graph resolver processes files inside short-term it strips the prefix, sharing node IDs with long-term files.
+On promote you only need to `mv` the file -- zero reference updates required.
 
-## TTL 规则
+## TTL rules
 
-- 基于 `created` 日期 + 7 天（schema.json `short_term.default_ttl_days`）
-- 仅用于提醒，不自动移动或删除
-- frontmatter tags 含 `seed` 的文件跳过 TTL 检查
+- Based on the `created` date + 7 days (schema.json `short_term.default_ttl_days`)
+- Used for reminders only; files are never moved or deleted automatically
+- Files whose frontmatter tags include `seed` skip the TTL check
 
-## 何时跳过 short-term
+## When to skip short-term
 
-- 修改已有长期目录中的文件：直接原地修改
-- 用户明确要求直接写入长期目录
+- Modifying a file that already exists in a long-term directory: edit it in place
+- The user explicitly requests writing directly to a long-term directory

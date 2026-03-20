@@ -1,5 +1,5 @@
 ---
-description: 从对话、diff、review 结果中提取可复用结论，写入 short-term 或长期目录，并同步图谱。
+description: Extract reusable conclusions from conversations, diffs, and review results, write them to short-term or long-term directories, and sync the graph.
 ---
 
 # Self-Improve Tool
@@ -13,20 +13,20 @@ description: 从对话、diff、review 结果中提取可复用结论，写入 s
 
 ## Write targets
 
-### 新建文件 → 默认写入 short-term
+### New files -> Write to short-term by default
 
 - `maxim` → `short-term/maxims/{one-sentence-conclusion}.md`
 - `decision` → `short-term/decisions/{date}-{conclusion}.md`
 - `pipeline` → `short-term/pipelines/run-when-*.md`
 - `knowledge` → `short-term/knowledge/{name}/content.md`
 
-命名规范与对应长期目录一致。`[[...]]` 链接不含 `short-term/` 前缀。
+Naming conventions match the corresponding long-term directories. `[[...]]` links do not include the `short-term/` prefix.
 
-### 修改已有文件 → 原地修改
+### Modifying existing files -> Edit in place
 
-已在 `maxims/decisions/knowledge/pipelines` 中的文件直接原地修改，不走 short-term。
+Files already in `maxims/decisions/knowledge/pipelines` are edited directly in place, not via short-term.
 
-### 例外：用户明确要求直接写入长期目录时可跳过 short-term。
+### Exception: When the user explicitly requests writing directly to long-term directories, short-term can be skipped.
 
 Read before writing:
 

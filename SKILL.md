@@ -1,12 +1,12 @@
 ---
 name: pensieve
 description: >-
-  项目知识库和工作流路由器。
-  knowledge/ 缓存已探索的文件位置、模块边界和调用链，可直接复用；
-  decisions/maxims 是已确立的架构决策和编码标准，遵循而非重新讨论；
-  pipelines 是可复用工作流；short-term/ 暂存新结论，到期后 promote 或删除。
-  完成任务后使用 self-improve 捕获新洞察。
-  提供 init、upgrade、migrate、doctor、self-improve 五个工具。
+  Project knowledge base and workflow router.
+  knowledge/ caches previously explored file locations, module boundaries, and call chains for direct reuse;
+  decisions/maxims are established architectural decisions and coding standards -- follow, don't re-debate;
+  pipelines are reusable workflows; short-term/ holds new conclusions temporarily, promoted or deleted upon expiry.
+  Use self-improve to capture new insights after completing tasks.
+  Provides five tools: init, upgrade, migrate, doctor, self-improve.
 ---
 
 # Pensieve
@@ -14,13 +14,13 @@ description: >-
 Route user requests to the correct tool. When in doubt, confirm first.
 
 ## Routing
-- Init: 初始化当前项目用户数据目录并填充种子文件。工具规格：`.src/tools/init.md`。
-- Upgrade: 刷新全局 git clone 中的 Pensieve skill 源代码。工具规格：`.src/tools/upgrade.md`。
-- Migrate: 结构迁移和遗留清理。工具规格：`.src/tools/migrate.md`。
-- Doctor: 只读扫描当前项目用户数据目录。工具规格：`.src/tools/doctor.md`。
-- Self-Improve: 提取可复用结论并写入用户数据。工具规格：`.src/tools/self-improve.md`。
-- Refine: 精炼知识库（triage 五问审阅 + compress 压缩抽象）。工具规格：`.src/tools/refine.md`。
-- Graph View: 读取 `<project-root>/.pensieve/.state/pensieve-user-data-graph.md`。
+- Init: Initialize the current project's user data directory and populate seed files. Tool spec: `.src/tools/init.md`.
+- Upgrade: Refresh Pensieve skill source code in the global git clone. Tool spec: `.src/tools/upgrade.md`.
+- Migrate: Structural migration and legacy cleanup. Tool spec: `.src/tools/migrate.md`.
+- Doctor: Read-only scan of the current project's user data directory. Tool spec: `.src/tools/doctor.md`.
+- Self-Improve: Extract reusable conclusions and write to user data. Tool spec: `.src/tools/self-improve.md`.
+- Refine: Refine the knowledge base (triage five-question review + compress abstraction). Tool spec: `.src/tools/refine.md`.
+- Graph View: Read `<project-root>/.pensieve/.state/pensieve-user-data-graph.md`.
 
 ## Project Data
 Project-level user data is stored in `<project-root>/.pensieve/`.

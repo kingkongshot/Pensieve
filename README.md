@@ -70,7 +70,7 @@ Layers are connected through three types of semantic links: `based-on / leads-to
 <img src="docs/graph-overview.png" width="100%" alt="Pensieve knowledge graph overview" />
 <img src="docs/graph-detail.png" width="100%" alt="Pensieve knowledge graph detail" />
 
-详细规范见 `.src/references/` 下的 [maxims.md](.src/references/maxims.md)、[decisions.md](.src/references/decisions.md)、[knowledge.md](.src/references/knowledge.md)、[pipelines.md](.src/references/pipelines.md)。
+See the detailed specifications under `.src/references/`: [maxims.md](.src/references/maxims.md), [decisions.md](.src/references/decisions.md), [knowledge.md](.src/references/knowledge.md), [pipelines.md](.src/references/pipelines.md).
 
 ## Five Tools
 

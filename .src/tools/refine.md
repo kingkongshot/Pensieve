@@ -1,106 +1,106 @@
 ---
-description: 精炼 Pensieve 知识库：通过五问决策审阅条目（triage），通过抽象和归纳压缩知识（compress）。
+description: Refine the Pensieve knowledge base: review entries through a five-question decision process (triage), compress knowledge through abstraction and induction (compress).
 ---
 
-# Refine 工具
+# Refine Tool
 
-> 工具边界见 `.src/references/tool-boundaries.md` | 共享规则见 `.src/references/shared-rules.md`
+> Tool boundaries: see `.src/references/tool-boundaries.md` | Shared rules: see `.src/references/shared-rules.md`
 
 ## Use when
 
-- session start 提醒有到期短期记忆
-- doctor 报告 `short_term_due_refine`
-- 用户请求 "整理" / "triage" / "去重" / "清理" / "发现关联"
-- 定期维护知识库质量
+- Session start reminds of due short-term memories
+- doctor reports `short_term_due_refine`
+- User requests "organize" / "triage" / "deduplicate" / "clean up" / "find connections"
+- Periodic knowledge base quality maintenance
 
 ---
 
-## 子任务 1：Triage — 五问决策审阅
+## Subtask 1: Triage — Five-Question Decision Review
 
-对条目逐个运行五问决策。适用于短期到期项、指定条目、或全库审阅。
+Run the five-question decision on entries one by one. Applies to short-term due items, specified entries, or full-library review.
 
-### 范围
+### Scope
 
-| 场景 | 扫描范围 |
+| Scenario | Scan Range |
 |---|---|
-| 短期到期 | `short-term/` 下 `created + 7天 < today` 的条目（跳过 tags 含 `seed`） |
-| 指定条目 | 用户指定的文件 |
-| 全库 | `maxims/` + `decisions/` + `knowledge/` + `pipelines/` + `short-term/` |
+| Short-term due | Entries under `short-term/` where `created + 7 days < today` (skip entries with `seed` in tags) |
+| Specified entries | Files specified by the user |
+| Full library | `maxims/` + `decisions/` + `knowledge/` + `pipelines/` + `short-term/` |
 
-### 五问决策
+### Five-Question Decision
 
-依次回答，命中终止条件即停止。
+Answer sequentially; stop when a termination condition is met.
 
-| # | 问题 | 否 → | 是 → |
+| # | Question | No -> | Yes -> |
 |---|---|---|---|
-| Q1 | 删掉它，未来是否会重复踩坑或重复探索？ | **DELETE** | Q2 |
-| Q2 | 它是否有证据支撑（代码、文档、实验结果）？ | **DELETE** | Q3 |
-| Q3 | 它是否已被现有条目覆盖？ | Q4 | **DELETE**（合并到已有条目） |
-| Q4 | 写入时的上下文是否仍然成立？ | **DELETE** | Q5 |
-| Q5 | 它是否符合目标层的内容规范？ | 补齐或 **DELETE** | **KEEP/PROMOTE** |
+| Q1 | If deleted, would we repeat the same mistake or redundant exploration in the future? | **DELETE** | Q2 |
+| Q2 | Is it backed by evidence (code, documentation, experiment results)? | **DELETE** | Q3 |
+| Q3 | Is it already covered by an existing entry? | Q4 | **DELETE** (merge into existing entry) |
+| Q4 | Is the context at the time of writing still valid? | **DELETE** | Q5 |
+| Q5 | Does it meet the content specification of the target layer? | Fill gaps or **DELETE** | **KEEP/PROMOTE** |
 
-Q5 规范文件：
+Q5 specification files:
 
-| type | 规范 |
+| type | Specification |
 |---|---|
 | `maxim` | `.src/references/maxims.md` |
 | `decision` | `.src/references/decisions.md` |
 | `knowledge` | `.src/references/knowledge.md` |
 | `pipeline` | `.src/references/pipelines.md` |
 
-### 执行
+### Execution
 
-- **PROMOTE**（short-term 条目）：`mv short-term/{type}/file.md {type}/file.md`，status 改 `active`
-- **KEEP**（长期条目）：无需操作
-- **补齐**：按规范补齐缺失内容，然后 KEEP/PROMOTE
-- **DELETE**：删除文件。若 Q3 判定重复，将有价值内容合并到已有条目后再删除
-
----
-
-## 子任务 2：Compress — 压缩知识库
-
-从整体视角审视所有条目，通过抽象和归纳**减少总条目数，同时提升信息密度**。
-
-### 三种压缩手法
-
-#### A. 向上抽象：多个条目 → 一个更高层条目
-
-多个条目呈现同一模式时，提炼出涵盖它们的更高层抽象，原条目可删除。
-
-> 例：三条 knowledge 分别记录"API A 必须幂等""API B 必须幂等""API C 必须幂等"
-> → 提炼一条 maxim "所有对外 API 必须幂等"，删除三条 knowledge。
-
-#### B. 提取共用：重复内容 → 独立条目 + 引用
-
-多个条目引用相同的事实或前提时，将共用部分提取为独立 knowledge，原条目改为 `[[...]]` 引用。
-
-> 例：三条 decision 都重复描述了同一段认证流程
-> → 提取为 `knowledge/auth-flow/content.md`，三条 decision 改为 `基于：[[knowledge/auth-flow/content]]`。
-
-#### C. 消除特殊情况：发现深层原理取代表面规则
-
-从整体视角发现看似不同的条目其实是同一深层原理的特殊情况，写出深层原理，删除表面规则。
-
-> 例：一条 maxim "不要在 handler 里直接操作数据库" + 一条 decision "service 层统一管理事务"
-> → 它们都是"关注点分离"的特殊情况。写一条更深的 maxim，原条目降级为 `[[...]]` 引用或删除。
-
-### 执行
-
-1. 读取所有长期目录 + short-term 的条目，建立全局视图
-2. 读取图谱（`.pensieve/.state/pensieve-user-data-graph.md`），理解链接结构
-3. 寻找压缩机会（A/B/C 三种手法）
-4. 对每个压缩方案：
-   - 说明涉及的条目和压缩手法
-   - 写出新条目（按目标层规范，走 short-term）
-   - 对被替代的旧条目运行五问 Q1-Q3，确认可删除后删除
-   - 保留 `[[...]]` 链接连通性
+- **PROMOTE** (short-term entries): `mv short-term/{type}/file.md {type}/file.md`, change status to `active`
+- **KEEP** (long-term entries): No action needed
+- **Fill gaps**: Fill in missing content per specification, then KEEP/PROMOTE
+- **DELETE**: Delete the file. If Q3 determines duplication, merge valuable content into the existing entry before deleting
 
 ---
 
-## 刷新状态
+## Subtask 2: Compress — Compress the Knowledge Base
 
-任何写操作后，刷新项目状态：
+Review all entries from a holistic perspective, **reducing total entry count while increasing information density** through abstraction and induction.
+
+### Three Compression Techniques
+
+#### A. Upward Abstraction: Multiple entries -> One higher-level entry
+
+When multiple entries exhibit the same pattern, distill a higher-level abstraction that covers them; original entries can be deleted.
+
+> Example: Three knowledge entries separately record "API A must be idempotent", "API B must be idempotent", "API C must be idempotent"
+> -> Distill one maxim "All external APIs must be idempotent", delete the three knowledge entries.
+
+#### B. Extract Shared Content: Repeated content -> Independent entry + references
+
+When multiple entries reference the same facts or premises, extract the shared portion as an independent knowledge entry, and change original entries to `[[...]]` references.
+
+> Example: Three decisions all redundantly describe the same authentication flow
+> -> Extract as `knowledge/auth-flow/content.md`, change the three decisions to `Based on: [[knowledge/auth-flow/content]]`.
+
+#### C. Eliminate Special Cases: Discover deeper principles that replace surface rules
+
+From a holistic perspective, discover that seemingly different entries are actually special cases of the same deeper principle; write the deeper principle, delete the surface rules.
+
+> Example: One maxim "Don't directly operate the database in handlers" + one decision "Service layer manages transactions uniformly"
+> -> They are both special cases of "separation of concerns". Write a deeper maxim, and demote the original entries to `[[...]]` references or delete them.
+
+### Execution
+
+1. Read all entries in long-term directories + short-term, build a global view
+2. Read the graph (`.pensieve/.state/pensieve-user-data-graph.md`), understand the link structure
+3. Look for compression opportunities (A/B/C techniques)
+4. For each compression plan:
+   - Describe the entries involved and the compression technique
+   - Write the new entry (per target layer specification, via short-term)
+   - Run the five-question Q1-Q3 on replaced old entries, delete after confirming they can be removed
+   - Preserve `[[...]]` link connectivity
+
+---
+
+## Refresh State
+
+After any write operation, refresh the project state:
 
 ```bash
-bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/maintain-project-state.sh" --event sync --note "refine: 描述"
+bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/maintain-project-state.sh" --event sync --note "refine: description"
 ```

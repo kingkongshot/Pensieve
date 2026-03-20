@@ -112,15 +112,15 @@ The value of capturing insights lies in reuse next time; unsubstantiated guesses
 
 ---
 
-## 短期记忆提示
+## Short-Term Memory Prompt
 
-提交完成后，若 `short-term/` 中有到期条目，追加一行提示：
+After committing, if there are expired entries in `short-term/`, append a one-line reminder:
 
-> 短期记忆有 N 条待整理，可运行 pensieve refine 完成处理。工具规格：`.src/tools/refine.md`。
+> Short-term memory has N entries pending triage. Run pensieve refine to process them. Tool spec: `.src/tools/refine.md`.
 
-不在提交流程中执行整理，仅提醒。
+Do not perform triage during the commit flow; only remind.
 
-## 失败回退
+## Failure Fallback
 
 1. `git diff --cached` is empty: skip Task 2/Task 3, output "no staged changes, nothing to commit".
 2. Capture step fails: log the blocking reason and skip capture, continue to Task 3; append "suggest running `doctor`" at the end.
