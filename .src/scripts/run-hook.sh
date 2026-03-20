@@ -42,10 +42,20 @@ to_posix_path() {
 
 ROOT_RAW="${PENSIEVE_SKILL_ROOT:-}"
 if [[ -z "$ROOT_RAW" ]]; then
+  # Resolve HOME reliably (may be unset on some Windows shell configurations).
+  if [[ -z "${HOME:-}" ]]; then
+    if [[ -n "${USERPROFILE:-}" ]]; then
+      HOME="$(to_posix_path "$USERPROFILE")"
+      export HOME
+    elif _h="$(cd ~ 2>/dev/null && pwd)"; then
+      HOME="$_h"
+      export HOME
+    fi
+  fi
   # v2: default to user-level skill root
-  ROOT_RAW="$HOME/.claude/skills/pensieve"
+  ROOT_RAW="${HOME:+$HOME/.claude/skills/pensieve}"
   # Fallback: derive from script location
-  if [[ ! -d "$ROOT_RAW" ]]; then
+  if [[ -z "$ROOT_RAW" || ! -d "$ROOT_RAW" ]]; then
     SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     ROOT_RAW="$(cd "$SELF_DIR/../.." && pwd)"
   fi
@@ -58,7 +68,11 @@ TARGET="$ROOT/.src/scripts/$SCRIPT_NAME"
 # Without it, scripts inside the user-level skill root cannot resolve
 # the actual project directory.
 if [[ -z "${PENSIEVE_PROJECT_ROOT:-}" && -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
-  export PENSIEVE_PROJECT_ROOT="$(to_posix_path "$CLAUDE_PROJECT_DIR")"
+  _resolved_pr="$(to_posix_path "$CLAUDE_PROJECT_DIR")"
+  if [[ -d "$_resolved_pr" ]]; then
+    export PENSIEVE_PROJECT_ROOT="$_resolved_pr"
+  fi
+  unset _resolved_pr
 fi
 export PENSIEVE_SKILL_ROOT="$ROOT"
 

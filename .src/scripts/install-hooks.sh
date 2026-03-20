@@ -8,10 +8,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
+ensure_home || { echo "Cannot determine home directory" >&2; exit 1; }
 SETTINGS_FILE="$HOME/.claude/settings.json"
 
-PYTHON_BIN="$(python_bin || true)"
-[[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
+ensure_python_env
+[[ -n "${PYTHON_BIN:-}" ]] || { echo "Python not found" >&2; exit 1; }
 
 mkdir -p "$(dirname "$SETTINGS_FILE")"
 

@@ -70,10 +70,14 @@ while IFS= read -r file; do
     files+=("$file")
 done < <(find "$ROOT" -type f -name '*.md' | LC_ALL=C sort)
 
+# Compute TTL cutoff date for short-term items (today - 7 days)
+TTL_CUTOFF="$(date -u -v-7d +"%Y-%m-%d" 2>/dev/null || date -u -d "7 days ago" +"%Y-%m-%d" 2>/dev/null || echo "")"
+
 run_awk() {
 awk \
     -v root="$ROOT" \
-    -v output="$OUTPUT" '
+    -v output="$OUTPUT" \
+    -v ttl_cutoff="$TTL_CUTOFF" '
 function trim(s) {
     sub(/^[[:space:]]+/, "", s)
     sub(/[[:space:]]+$/, "", s)
@@ -84,8 +88,13 @@ function relpath(path, r) {
     if (path == r) return ""
     return path
 }
-function category(rel, arr, n) {
-    n = split(rel, arr, "/")
+function strip_short_term(rel) {
+    if (index(rel, "short-term/") == 1) return substr(rel, 12)
+    return rel
+}
+function category(rel, arr, n, stripped) {
+    stripped = strip_short_term(rel)
+    n = split(stripped, arr, "/")
     if (n <= 1) return "root"
     return arr[1]
 }
@@ -124,6 +133,8 @@ BEGIN {
 {
     if (FNR == 1) {
         file_allowed = 0
+        st_pending = 0
+        st_in_fm = 0
         if (FILENAME == output) {
             next
         }
@@ -131,10 +142,43 @@ BEGIN {
         if (is_generated_graph(current_rel)) {
             next
         }
-        current_cat = category(current_rel)
-        if (allowed(current_cat)) {
+        # For short-term files, defer add_member until we check TTL
+        if (index(current_rel, "short-term/") == 1) {
+            current_rel = strip_short_term(current_rel)
+            current_cat = category(current_rel)
+            if (allowed(current_cat)) {
+                st_pending = 1
+                st_in_fm = 1
+                file_allowed = 1
+            }
+        } else {
+            current_cat = category(current_rel)
+            if (allowed(current_cat)) {
+                add_member(current_cat, current_rel)
+                file_allowed = 1
+            }
+        }
+    }
+    # For short-term files: parse frontmatter to check created date
+    if (st_pending) {
+        if (FNR == 1 && $0 ~ /^---/) { next }
+        if ($0 ~ /^---/) {
+            # End of frontmatter reached without finding created — include anyway
+            st_pending = 0
             add_member(current_cat, current_rel)
-            file_allowed = 1
+            next
+        }
+        if ($0 ~ /^created:[[:space:]]/) {
+            sub(/^created:[[:space:]]*/, "", $0)
+            sub(/[[:space:]].*$/, "", $0)
+            if (ttl_cutoff != "" && $0 != "" && $0 <= ttl_cutoff) {
+                # Expired: exclude from graph
+                file_allowed = 0
+            } else {
+                add_member(current_cat, current_rel)
+            }
+            st_pending = 0
+            next
         }
     }
     if (!file_allowed) next

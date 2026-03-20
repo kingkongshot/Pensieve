@@ -68,15 +68,9 @@ You steer the direction, Pensieve helps you avoid pitfalls.
 Layers are connected through three types of semantic links: `based-on / leads-to / related`. As usage accumulates, Pensieve automatically builds a directed graph of project knowledge:
 
 <img src="docs/graph-overview.png" width="100%" alt="Pensieve knowledge graph overview" />
-
-<details>
-<summary><b>Zoom in for detail</b></summary>
-
 <img src="docs/graph-detail.png" width="100%" alt="Pensieve knowledge graph detail" />
 
-</details>
-
-Detailed specifications are in `.src/references/`: [maxims.md](.src/references/maxims.md), [decisions.md](.src/references/decisions.md), [knowledge.md](.src/references/knowledge.md), [pipelines.md](.src/references/pipelines.md).
+详细规范见 `.src/references/` 下的 [maxims.md](.src/references/maxims.md)、[decisions.md](.src/references/decisions.md)、[knowledge.md](.src/references/knowledge.md)、[pipelines.md](.src/references/pipelines.md)。
 
 ## Five Tools
 

@@ -1,6 +1,8 @@
 {
   "schema_version": 2,
   "required_dirs": ["maxims", "decisions", "knowledge", "pipelines"],
+  "optional_dirs": ["short-term"],
+  "short_term": { "default_ttl_days": 7 },
   "critical_files": [
     {
       "target": "pipelines/run-when-reviewing-code.md",

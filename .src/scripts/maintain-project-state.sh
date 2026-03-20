@@ -69,6 +69,7 @@ GRAPH_SCRIPT="$SKILL_ROOT/.src/scripts/generate-user-data-graph.sh"
 AUTO_MEMORY_SCRIPT="$SKILL_ROOT/.src/scripts/maintain-auto-memory.sh"
 
 mkdir -p "$USER_DATA_ROOT"/{maxims,decisions,knowledge,pipelines}
+mkdir -p "$USER_DATA_ROOT"/short-term/{maxims,decisions,knowledge,pipelines}
 
 if [[ -x "$GRAPH_SCRIPT" ]]; then
   bash "$GRAPH_SCRIPT" --root "$USER_DATA_ROOT" --output "$GRAPH_FILE" >/dev/null
@@ -76,13 +77,15 @@ else
   printf '%s\n' "_(graph not generated yet)_" > "$GRAPH_FILE"
 fi
 
-PYTHON_BIN="$(python_bin || true)"
-[[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
+ensure_python_env
+[[ -n "${PYTHON_BIN:-}" ]] || { echo "Python not found" >&2; exit 1; }
 TODAY_UTC="$(date -u +"%Y-%m-%d")"
 
 "$PYTHON_BIN" - "$STATE_FILE" "$GRAPH_FILE" "$EVENT" "$TODAY_UTC" "$PROJECT_ROOT" "$USER_DATA_ROOT" "$STATE_ROOT" "$NOTE" <<'PY'
 from __future__ import annotations
 
+import datetime as dt
+import re
 import sys
 from pathlib import Path
 
@@ -131,9 +134,47 @@ def replace_section(lines: list[str], header: str, new_body: list[str]) -> list[
     return lines[: start + 1] + new_body + lines[end:]
 
 
+def scan_short_term() -> tuple[int, int]:
+    """Return (total, due) counts for short-term items."""
+    st_dir = Path(user_data_root) / "short-term"
+    if not st_dir.is_dir():
+        return 0, 0
+    total = 0
+    due = 0
+    ttl_days = 7
+    date_re = re.compile(r"^created:\s*(\d{4}-\d{2}-\d{2})", re.MULTILINE)
+    try:
+        today_date = dt.date.fromisoformat(today)
+    except ValueError:
+        today_date = dt.date.today()
+    for f in sorted(st_dir.rglob("*.md")):
+        if not f.is_file():
+            continue
+        text = f.read_text(encoding="utf-8", errors="replace")[:1024]
+        fm_end = text.find("\n---", 4)
+        if fm_end < 0:
+            continue
+        fm = text[:fm_end]
+        tags_idx = fm.find("tags:")
+        if tags_idx >= 0 and "seed" in fm[tags_idx:].split("\n")[0].lower():
+            continue
+        m = date_re.search(fm)
+        if not m:
+            continue
+        try:
+            created = dt.date.fromisoformat(m.group(1))
+        except ValueError:
+            continue
+        total += 1
+        if (today_date - created).days >= ttl_days:
+            due += 1
+    return total, due
+
+
 event_name = event_display_name(event)
 graph_markdown = load_graph_ref()
 last_note = note if note else "(none)"
+st_total, st_due = scan_short_term()
 
 if state_file.exists():
     text = state_file.read_text(encoding="utf-8", errors="replace")
@@ -162,6 +203,16 @@ if state_file.exists():
 
     lines = replace_section(
         lines,
+        "## Short-Term",
+        [
+            f"- Total: {st_total}",
+            f"- Due for refine: {st_due} (created 7+ days ago)",
+            "",
+        ],
+    )
+
+    lines = replace_section(
+        lines,
         "## Graph",
         [
             "",
@@ -182,6 +233,10 @@ else:
 - Project Root: `{project_root}`
 - User Data: `.pensieve/`
 - Runtime State: `.pensieve/.state/`
+
+## Short-Term
+- Total: {st_total}
+- Due for refine: {st_due} (created 7+ days ago)
 
 ## Graph
 

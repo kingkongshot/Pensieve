@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import re
 import sys
@@ -283,6 +284,47 @@ def run(argv: list[str]) -> int:
                 recommendation="Create the target file or fix the link target name",
             )
         )
+
+    # Check for short-term items due for refine
+    short_term_dir = Path(user_root) / "short-term"
+    if short_term_dir.is_dir():
+        today_date = dt.date.today()
+        ttl_days = 7
+        date_re = re.compile(r"^created:\s*(\d{4}-\d{2}-\d{2})", re.MULTILINE)
+        stm_idx = 0
+        for md_file in sorted(short_term_dir.rglob("*.md")):
+            if not md_file.is_file():
+                continue
+            text = md_file.read_text(encoding="utf-8", errors="replace")[:1024]
+            fm_end = text.find("\n---", 4)
+            if fm_end < 0:
+                continue
+            fm_block = text[:fm_end]
+            tags_idx = fm_block.find("tags:")
+            if tags_idx >= 0 and "seed" in fm_block[tags_idx:].split("\n")[0].lower():
+                continue
+            m = date_re.search(fm_block)
+            if not m:
+                continue
+            try:
+                created = dt.date.fromisoformat(m.group(1))
+            except ValueError:
+                continue
+            if (today_date - created).days >= ttl_days:
+                stm_idx += 1
+                rel_path = str(md_file.relative_to(Path(user_root)))
+                days_overdue = (today_date - created).days - ttl_days
+                findings.append(
+                    Finding(
+                        finding_id=f"STM-{stm_idx:03d}",
+                        severity="SHOULD_FIX",
+                        category="short_term_due_refine",
+                        path=rel_path,
+                        rule_source=".src/references/short-term.md",
+                        message=f"Short-term item due for refine (created {m.group(1)}, {days_overdue}d overdue). Promote or delete.",
+                        recommendation="Run refine tool to review short-term items",
+                    )
+                )
 
     must_fix = [f for f in findings if f.severity == "MUST_FIX"]
     should_fix = [f for f in findings if f.severity == "SHOULD_FIX"]
