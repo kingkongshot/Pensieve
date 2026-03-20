@@ -112,6 +112,14 @@ gate: auto
 
 ---
 
+## 短期记忆提示
+
+提交完成后，若 `short-term/` 中有到期条目，追加一行提示：
+
+> 短期记忆有 N 条待整理，可运行 pensieve refine 完成处理。工具规格：`.src/tools/refine.md`。
+
+不在提交流程中执行整理，仅提醒。
+
 ## 失败回退
 
 1. `git diff --cached` 为空：跳过 Task 2/Task 3，输出"无 staged 变更，不提交"。

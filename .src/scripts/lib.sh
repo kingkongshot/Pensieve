@@ -8,6 +8,39 @@
 # - Dynamic project state lives at <project>/.pensieve/state.md.
 # - Hidden runtime state lives under <project>/.pensieve/.state/.
 
+# Resolve home directory reliably across platforms.
+# Priority: $HOME > $USERPROFILE (Windows) > cd ~ (tilde expansion).
+resolve_home() {
+    if [[ -n "${HOME:-}" ]]; then
+        to_posix_path "$HOME"
+        return 0
+    fi
+    # Windows: USERPROFILE is always set by the OS.
+    if [[ -n "${USERPROFILE:-}" ]]; then
+        to_posix_path "$USERPROFILE"
+        return 0
+    fi
+    # Last resort: tilde expansion (works in bash even without HOME).
+    local h
+    if h="$(cd ~ 2>/dev/null && pwd)"; then
+        echo "$h"
+        return 0
+    fi
+    echo "resolve_home: cannot determine home directory" >&2
+    return 1
+}
+
+# Ensure HOME is set and POSIX-normalized. Call early in scripts that depend on $HOME.
+# Exports HOME so child processes (Python, sub-scripts) also see it.
+ensure_home() {
+    if [[ -z "${HOME:-}" ]]; then
+        HOME="$(resolve_home)" || return 1
+    else
+        HOME="$(to_posix_path "$HOME")"
+    fi
+    export HOME
+}
+
 # Sync marker: v2026-03-10 — run-hook.sh has a standalone copy; keep in sync.
 to_posix_path() {
     local raw_path="$1"
@@ -36,15 +69,20 @@ to_posix_path() {
 
 skill_root_from_script() {
     local script_dir="$1"
-    local dir
+    local dir prev_dir
     dir="$(cd "$script_dir" && pwd)"
 
-    while [[ "$dir" != "/" ]]; do
+    local depth=0
+    while [[ $depth -lt 50 ]]; do
         if [[ -f "$dir/.src/manifest.json" ]]; then
             echo "$dir"
             return 0
         fi
+        prev_dir="$dir"
         dir="$(cd "$dir/.." && pwd)"
+        # Reached filesystem root (Unix "/" or Windows drive root "/c").
+        [[ "$dir" != "$prev_dir" ]] || break
+        depth=$((depth + 1))
     done
 
     echo "Failed to locate skill root from: $script_dir" >&2
@@ -95,13 +133,23 @@ project_root() {
     caller="${1:-$(pwd)}"
 
     if [[ -n "${PENSIEVE_PROJECT_ROOT:-}" ]]; then
-        to_posix_path "$PENSIEVE_PROJECT_ROOT"
-        return 0
+        local pr_env
+        pr_env="$(to_posix_path "$PENSIEVE_PROJECT_ROOT")"
+        if [[ -d "$pr_env" ]]; then
+            echo "$pr_env"
+            return 0
+        fi
+        echo "project_root: PENSIEVE_PROJECT_ROOT='$PENSIEVE_PROJECT_ROOT' does not exist, falling back to detection" >&2
     fi
 
     if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
-        to_posix_path "$CLAUDE_PROJECT_DIR"
-        return 0
+        local cd_env
+        cd_env="$(to_posix_path "$CLAUDE_PROJECT_DIR")"
+        if [[ -d "$cd_env" ]]; then
+            echo "$cd_env"
+            return 0
+        fi
+        echo "project_root: CLAUDE_PROJECT_DIR='$CLAUDE_PROJECT_DIR' does not exist, falling back to detection" >&2
     fi
 
     # v2: skill root lives at user-level (~/.claude/skills/pensieve/), so we
@@ -129,14 +177,18 @@ project_root() {
     fi
 
     # Walk up looking for .pensieve/ directory (v2 project marker).
-    local dir
+    local dir prev_dir
     dir="$(cd "$start_dir" && pwd)"
-    while [[ "$dir" != "/" ]]; do
+    local depth=0
+    while [[ $depth -lt 50 ]]; do
         if [[ -d "$dir/.pensieve" ]]; then
             echo "$dir"
             return 0
         fi
+        prev_dir="$dir"
         dir="$(cd "$dir/.." && pwd)"
+        [[ "$dir" != "$prev_dir" ]] || break
+        depth=$((depth + 1))
     done
 
     echo "project_root: unable to determine project root from '$start_dir'. Set PENSIEVE_PROJECT_ROOT or cd into your project." >&2
@@ -186,7 +238,9 @@ skill_version() {
 auto_memory_project_key() {
     local pr
     if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
-        pr="$CLAUDE_PROJECT_DIR"
+        # Normalize to POSIX before encoding — ensures the same key regardless
+        # of whether the caller or env var uses Windows vs POSIX paths.
+        pr="$(to_posix_path "$CLAUDE_PROJECT_DIR")"
     else
         pr="$(project_root "${1:-$(pwd)}")"
     fi
@@ -202,7 +256,7 @@ auto_memory_project_key() {
 
 auto_memory_dir() {
     local home_dir key
-    home_dir="$(to_posix_path "${HOME:-$(cd ~ && pwd)}")"
+    home_dir="$(resolve_home)" || { echo "auto_memory_dir: cannot resolve home" >&2; return 1; }
     key="$(auto_memory_project_key "${1:-$(pwd)}")"
     echo "$home_dir/.claude/projects/$key/memory"
 }
@@ -235,6 +289,7 @@ ensure_user_data_root() {
     local dr
     dr="$(user_data_root "${1:-$(pwd)}")"
     mkdir -p "$dr"/{maxims,decisions,knowledge,pipelines}
+    mkdir -p "$dr"/short-term/{maxims,decisions,knowledge,pipelines}
     echo "$dr"
 }
 
@@ -268,7 +323,28 @@ ensure_state_dir() {
 }
 
 python_bin() {
-    command -v python3 || command -v python
+    local p3
+    p3="$(command -v python3 2>/dev/null)" || true
+    # Validate python3 is real (Windows Store stub exits non-zero on --version).
+    if [[ -n "$p3" ]] && "$p3" --version >/dev/null 2>&1; then
+        echo "$p3"
+        return 0
+    fi
+    command -v python
+}
+
+# Set up runtime environment for Windows compatibility.
+# - Ensures HOME is set (falls back to USERPROFILE on Windows).
+# - PYTHONIOENCODING=utf-8: prevents UnicodeEncodeError on GBK terminals
+#   when printing emoji/CJK characters.
+# - Resolves and exports PYTHON_BIN so callers don't repeat detection.
+ensure_python_env() {
+    ensure_home || true
+    export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
+    if [[ -z "${PYTHON_BIN:-}" ]]; then
+        PYTHON_BIN="$(python_bin || true)"
+        export PYTHON_BIN
+    fi
 }
 
 runtime_now_utc() {
@@ -343,7 +419,7 @@ validate_project_root() {
     fi
 
     local home_dir
-    home_dir="$(to_posix_path "$HOME")"
+    home_dir="$(resolve_home 2>/dev/null)" || home_dir=""
 
     case "$root" in
         /|/tmp|/tmp/*)

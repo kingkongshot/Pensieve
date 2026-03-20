@@ -41,8 +41,8 @@ MEMORY_FILE="$(auto_memory_file)"
 SYSTEM_SKILL_FILE="$SKILL_ROOT/SKILL.md"
 SCHEMA_FILE="$SKILL_ROOT/.src/core/schema.json"
 
-PYTHON_BIN="$(python_bin || true)"
-[[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
+ensure_python_env
+[[ -n "${PYTHON_BIN:-}" ]] || { echo "Python not found" >&2; exit 1; }
 
 "$PYTHON_BIN" - "$MEMORY_FILE" "$SYSTEM_SKILL_FILE" "$EVENT" "$SCHEMA_FILE" "$SKILL_ROOT" <<'PY'
 from __future__ import annotations

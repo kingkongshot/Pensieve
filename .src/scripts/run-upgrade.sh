@@ -93,8 +93,8 @@ MAINTAIN_SCRIPT="$SCRIPT_DIR/maintain-project-state.sh"
 ensure_state_dir "$STATE_DIR" >/dev/null
 mkdir -p "$(dirname "$REPORT")" "$(dirname "$SUMMARY_JSON")"
 
-PYTHON_BIN="$(python_bin || true)"
-[[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
+ensure_python_env
+[[ -n "${PYTHON_BIN:-}" ]] || { echo "Python not found" >&2; exit 1; }
 
 if ! git -C "$SKILL_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "Pensieve upgrade requires a git checkout at: $SKILL_ROOT" >&2

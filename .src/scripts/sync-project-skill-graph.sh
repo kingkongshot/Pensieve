@@ -8,8 +8,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
-PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
-[[ -n "$PYTHON_BIN" ]] || exit 0
+ensure_python_env
+[[ -n "${PYTHON_BIN:-}" ]] || exit 0
 
 HOOK_INPUT="$(cat || true)"
 [[ -n "$HOOK_INPUT" ]] || exit 0

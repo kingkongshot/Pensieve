@@ -22,8 +22,8 @@ if [[ "$STDIN_DATA" != *'"subagent_type"'*'"Explore"'* ]] && \
   exit 0
 fi
 
-PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python || true)}"
-[[ -n "$PYTHON_BIN" ]] || exit 0
+ensure_python_env
+[[ -n "${PYTHON_BIN:-}" ]] || exit 0
 
 SKILL_FILE="$(skill_md_file "$SCRIPT_DIR")"
 STATE_FILE="$(project_state_file)"

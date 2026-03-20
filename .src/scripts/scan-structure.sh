@@ -86,11 +86,11 @@ fi
 
 SKILL_ROOT="$(skill_root_from_script "$SCRIPT_DIR")"
 SCHEMA_FILE="$SKILL_ROOT/.src/core/schema.json"
-HOME_DIR="${HOME:-}"
 TIMESTAMP="$(runtime_now_utc)"
 
-PYTHON_BIN="$(python_bin || true)"
-[[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
+ensure_python_env
+[[ -n "${PYTHON_BIN:-}" ]] || { echo "Python not found" >&2; exit 1; }
+HOME_DIR="$(resolve_home 2>/dev/null || echo "")"
 
 "$PYTHON_BIN" - "$ROOT" "$PROJECT_ROOT" "$SKILL_ROOT" "$SCHEMA_FILE" "$HOME_DIR" "$AUTO_MEMORY_FILE" "$FORMAT" "$OUTPUT" "$TIMESTAMP" "$FAIL_ON_DRIFT" <<'PY'
 from __future__ import annotations
@@ -149,6 +149,7 @@ except Exception as exc:  # noqa: BLE001
     raise SystemExit(f"failed to load schema: {exc}") from exc
 
 required_dirs = [str(x) for x in schema.get("required_dirs", [])]
+optional_dirs = [str(x) for x in schema.get("optional_dirs", [])]
 critical_files = []
 for item in schema.get("critical_files", []):
     if not isinstance(item, dict):
@@ -283,11 +284,32 @@ for d in required_dirs:
             "Run init or migrate to restore the directory structure, then re-run doctor.",
         )
 
+for d in optional_dirs:
+    p = root / d
+    if not p.is_dir():
+        add_finding(
+            "STR-003", "INFO", "missing_optional_directory", p,
+            f"Optional directory not found: {d}/",
+            "Run init or migrate to create the directory, or ignore if not needed.",
+        )
+
 # Check for legacy v1 directories (existence only, not contents).
 for p in legacy_project_paths + legacy_user_paths:
-    if same_path(p, skill_root):
+    if not p.is_dir():
         continue
-    if p.is_dir():
+    # When a legacy path candidate resolves to skill_root AND skill_root
+    # is at the canonical user-level location (~/.claude/skills/pensieve),
+    # this is the actual installation, not a legacy remnant — skip it.
+    user_level_skill = home_dir / ".claude" / "skills" / "pensieve"
+    if same_path(p, skill_root) and same_path(skill_root, user_level_skill):
+        continue
+    if same_path(p, skill_root):
+        add_finding(
+            "STR-101", "MUST_FIX", "deprecated_path", p,
+            f"Legacy v1 data directory found: {p} (current skill_root — switch to user-level installation)",
+            "Install Pensieve at user level (~/.claude/skills/pensieve), then re-run migrate to clean up this project-level legacy path.",
+        )
+    else:
         add_finding(
             "STR-101", "MUST_FIX", "deprecated_path", p,
             f"Legacy v1 data directory found: {p}",

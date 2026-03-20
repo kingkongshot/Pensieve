@@ -54,8 +54,8 @@ if [[ -z "$ROOT" ]]; then
 fi
 ROOT="$(to_posix_path "$ROOT")"
 
-PYTHON_BIN="$(python_bin || true)"
-[[ -n "$PYTHON_BIN" ]] || { echo "Python not found" >&2; exit 1; }
+ensure_python_env
+[[ -n "${PYTHON_BIN:-}" ]] || { echo "Python not found" >&2; exit 1; }
 
 "$PYTHON_BIN" - "$ROOT" "$FORMAT" <<'PY'
 from __future__ import annotations
@@ -90,17 +90,23 @@ def list_markdown_files(base: Path) -> list[Path]:
     if not base.exists():
         return []
     files: list[Path] = []
-    for cat in ["maxims", "decisions", "knowledge", "pipelines"]:
-        cat_dir = base / cat
-        if not cat_dir.exists():
-            continue
-        for p in cat_dir.rglob("*.md"):
-            if p.name.startswith("graph"):
+    # Scan long-term directories and short-term/ mirror
+    scan_roots = [base]
+    st_dir = base / "short-term"
+    if st_dir.is_dir():
+        scan_roots.append(st_dir)
+    for scan_root in scan_roots:
+        for cat in ["maxims", "decisions", "knowledge", "pipelines"]:
+            cat_dir = scan_root / cat
+            if not cat_dir.exists():
                 continue
-            if cat == "maxims" and p.name == "custom.md":
-                # Legacy maxim index; not part of current required model.
-                continue
-            files.append(p)
+            for p in cat_dir.rglob("*.md"):
+                if p.name.startswith("graph"):
+                    continue
+                if cat == "maxims" and p.name == "custom.md":
+                    # Legacy maxim index; not part of current required model.
+                    continue
+                files.append(p)
     return sorted(files)
 
 
@@ -240,8 +246,10 @@ if not root.exists():
 
 for p in files:
     rel = str(p.relative_to(root))
+    # Strip short-term/ prefix for validation so rules match the target layer
+    check_rel = rel[len("short-term/"):] if rel.startswith("short-term/") else rel
 
-    if rel.startswith("pipelines/"):
+    if check_rel.startswith("pipelines/"):
         if p.name == "review.md":
             issues.append(
                 Issue(
@@ -299,7 +307,7 @@ for p in files:
     if v_tags is not None and not isinstance(v_tags, list):
         issues.append(Issue("MUST_FIX", "FM-205", rel, "Invalid tags (must be an array, e.g. [pensieve, maxim])"))
 
-    if rel.startswith("decisions/"):
+    if check_rel.startswith("decisions/"):
         body = body_without_frontmatter(text)
         if not re.search(r"^\s*##\s*(?:探索减负|Exploration Reduction)\s*$", body, flags=re.MULTILINE):
             issues.append(
