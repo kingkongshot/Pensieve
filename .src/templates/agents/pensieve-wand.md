@@ -1,6 +1,6 @@
 ---
-name: pensieve-oracle
-description: "当你需要在开始探索或调查之前，快速检索 pensieve 知识库中积累的知识、过往决策、已知陷阱或已探索的代码路径时，使用此 agent。应主动使用此 agent 来缩小搜索范围，避免重蹈覆辙。\n\n示例：\n\n- 用户：「这个模块的架构决策是什么？」\n  助手：「让我先用 pensieve-oracle 查一下我们之前有没有关于这个模块的决策记录。」\n  <使用 Agent 工具启动 pensieve-oracle>\n\n- 用户：「我要改 X 模块的核心逻辑」\n  助手：「先让我用 pensieve-oracle 检索一下相关的架构决策和已知陷阱。」\n  <使用 Agent 工具启动 pensieve-oracle>\n\n- 场景：探索 agent 准备搜索某个子系统。\n  助手：「先让 pensieve-oracle 检查缓存的知识，再做广泛探索。」\n  <使用 Agent 工具启动 pensieve-oracle>"
+name: pensieve-wand
+description: "在动手改代码之前，先用 pensieve-wand 检索项目积累的知识、架构决策和已知陷阱，避免重蹈覆辙。像 Linus 说的——先理解系统，再动手改它。\n\n示例：\n\n- 用户：「把这个回调改成 async」\n  助手：「先让 pensieve-wand 查一下这个模块的调用链和边界约束——Linus 说过，改接口之前要知道谁在用它。」\n  <使用 Agent 工具启动 pensieve-wand>\n\n- 用户：「这个 if-else 太多了，重构一下」\n  助手：「让 pensieve-wand 检查一下有没有相关的 maxim——我们有条准则是'通过重新设计数据流消除特殊情况'。」\n  <使用 Agent 工具启动 pensieve-wand>\n\n- 用户：「加一个配置项来控制这个行为」\n  助手：「先让 pensieve-wand 查查之前有没有类似的决策记录——避免加不必要的复杂度，先简化再扩展。」\n  <使用 Agent 工具启动 pensieve-wand>"
 model: sonnet
 color: cyan
 memory: project
