@@ -116,7 +116,7 @@ gate: auto
 
 提交完成后，若 `short-term/` 中有到期条目，追加一行提示：
 
-> 短期记忆有 N 条待整理，可运行 refine 工具处理。工具规格：`.src/tools/refine.md`。
+> 短期记忆有 N 条待整理，可运行 pensieve refine 完成处理。工具规格：`.src/tools/refine.md`。
 
 不在提交流程中执行整理，仅提醒。
 

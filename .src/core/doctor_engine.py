@@ -322,7 +322,7 @@ def run(argv: list[str]) -> int:
                         path=rel_path,
                         rule_source=".src/references/short-term.md",
                         message=f"Short-term item due for triage (created {m.group(1)}, {days_overdue}d overdue). Promote or delete.",
-                        recommendation="Run refine tool to triage short-term items",
+                        recommendation="Run pensieve refine to triage short-term items",
                     )
                 )
 

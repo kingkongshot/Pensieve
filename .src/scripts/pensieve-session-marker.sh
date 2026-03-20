@@ -244,7 +244,7 @@ if initialized and self_check_ok:
 
     ctx = f"PENSIEVE_SKILL_ROOT={skill_root}\nPENSIEVE_PROJECT_ROOT={project_root}"
     if _st_due > 0:
-        ctx += f"\n\n短期记忆待整理：{_st_due} 条已到期（共 {_st_total} 条）。可运行 refine 工具整理。"
+        ctx += f"\n\n短期记忆待整理：{_st_due} 条已到期（共 {_st_total} 条）。可运行 pensieve refine 完成处理。"
 
     payload = {
         "hookSpecificOutput": {
@@ -253,7 +253,7 @@ if initialized and self_check_ok:
         },
     }
     if _st_due > 0:
-        payload["systemMessage"] = f"Pensieve: {_st_due} 条短期记忆待整理。运行 refine 处理。"
+        payload["systemMessage"] = f"Pensieve: {_st_due} 条短期记忆待整理。运行 pensieve refine 处理。"
     print(json.dumps(payload, ensure_ascii=False))
     sys.exit(0)
 
