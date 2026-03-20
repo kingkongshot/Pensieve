@@ -92,7 +92,7 @@ TEMPLATE_AGENTS_DIR="$TEMPLATES_ROOT/agents"
 AGENT_SEEDED_COUNT=0
 AGENT_SEEDED_TARGET=""
 if [[ -d "$TEMPLATE_AGENTS_DIR" ]]; then
-  for client_dir in .claude .cursor .agents; do
+  for client_dir in .claude; do
     if [[ -d "$_PROJECT_ROOT/$client_dir" ]]; then
       AGENTS_DIR="$_PROJECT_ROOT/$client_dir/agents"
       mkdir -p "$AGENTS_DIR"
