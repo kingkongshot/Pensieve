@@ -72,7 +72,7 @@ Pensieve 不只是存文档——它让 agent 的每一次对话都更精准：
 
 详细规范见 `.src/references/` 下的 [maxims.md](.src/references/maxims.md)、[decisions.md](.src/references/decisions.md)、[knowledge.md](.src/references/knowledge.md)、[pipelines.md](.src/references/pipelines.md)。
 
-## 五个工具
+## 六个工具
 
 | 工具 | 做什么 | 触发示例 |
 |---|---|---|
@@ -81,6 +81,7 @@ Pensieve 不只是存文档——它让 agent 的每一次对话都更精准：
 | `migrate` | 迁移旧版本数据，对齐种子文件 | "迁移到 v2" |
 | `doctor` | 只读扫描，检查结构和格式 | "检查数据有没有问题" |
 | `self-improve` | 从对话和 diff 中提取洞察，写入四层知识 | "把这次经验沉淀下来" |
+| `refine` | 精炼知识库（triage 审阅 + compress 压缩） | "整理一下短期记忆" |
 
 工具边界与重定向规则见 [tool-boundaries.md](.src/references/tool-boundaries.md)。
 

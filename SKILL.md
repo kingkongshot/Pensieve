@@ -6,7 +6,7 @@ description: >-
   decisions/maxims 是已确立的架构决策和编码标准，遵循而非重新讨论；
   pipelines 是可复用工作流；short-term/ 暂存新结论，到期后 promote 或删除。
   完成任务后使用 self-improve 捕获新洞察。
-  提供 init、upgrade、migrate、doctor、self-improve 五个工具。
+  提供 init、upgrade、migrate、doctor、self-improve、refine 六个工具。
 ---
 
 # Pensieve

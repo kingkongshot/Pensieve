@@ -2,7 +2,7 @@
 id: architecture-v2
 type: spec
 title: "架构 v2：用户级系统 + 项目级数据"
-status: draft
+status: active
 created: 2026-03-10
 tags: [architecture, refactor, v2]
 ---
@@ -122,7 +122,8 @@ description: >-
 - Migrate: 结构迁移和遗留清理。工具规格：`.src/tools/migrate.md`。
 - Doctor: 只读扫描当前项目用户数据目录。工具规格：`.src/tools/doctor.md`。
 - Self-Improve: 提取可复用结论并写入用户数据。工具规格：`.src/tools/self-improve.md`。
-- Graph View: 读取 `<project-root>/.pensieve/state.md` 的 `## Graph` 部分。
+- Refine: 精炼知识库（triage 五问审阅 + compress 压缩抽象）。工具规格：`.src/tools/refine.md`。
+- Graph View: 读取 `<project-root>/.pensieve/.state/pensieve-user-data-graph.md`。
 
 ## Project Data
 项目级用户数据存储在 `<project-root>/.pensieve/`。
