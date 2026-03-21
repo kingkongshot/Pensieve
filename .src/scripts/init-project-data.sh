@@ -86,6 +86,31 @@ for template_pipeline in "$TEMPLATES_ROOT"/pipeline.run-when-*.md; do
   fi
 done
 
+# Seed custom agents for detected clients.
+# Only seed when the client's config directory already exists in the project.
+TEMPLATE_AGENTS_DIR="$TEMPLATES_ROOT/agents"
+AGENT_SEEDED_COUNT=0
+AGENT_SEEDED_TARGET=""
+if [[ -d "$TEMPLATE_AGENTS_DIR" ]]; then
+  for client_dir in .claude; do
+    if [[ -d "$_PROJECT_ROOT/$client_dir" ]]; then
+      AGENTS_DIR="$_PROJECT_ROOT/$client_dir/agents"
+      mkdir -p "$AGENTS_DIR"
+      for template_agent in "$TEMPLATE_AGENTS_DIR"/*.md; do
+        [[ -f "$template_agent" ]] || continue
+        is_readme_file "$template_agent" && continue
+        target_agent="$AGENTS_DIR/$(basename "$template_agent")"
+        if [[ ! -f "$target_agent" ]]; then
+          cp "$template_agent" "$target_agent"
+          ((AGENT_SEEDED_COUNT++)) || true
+        fi
+      done
+      AGENT_SEEDED_TARGET="$client_dir/agents/"
+      break
+    fi
+  done
+fi
+
 echo "✅ Initialization complete: $DATA_ROOT"
 MAXIM_COUNT=0
 if [[ -d "$DATA_ROOT/maxims" ]]; then
@@ -94,6 +119,11 @@ fi
 echo "  - maxims/*.md: $MAXIM_COUNT files present"
 echo "  - knowledge/*: seeded $KNOWLEDGE_SEEDED_COUNT new file(s)"
 echo "  - pipelines/*: seeded $PIPELINE_SEEDED_COUNT new file(s)"
+if [[ -n "$AGENT_SEEDED_TARGET" ]]; then
+  echo "  - agents: seeded $AGENT_SEEDED_COUNT new file(s) → $AGENT_SEEDED_TARGET"
+else
+  echo "  - agents: skipped (no client config directory detected)"
+fi
 echo "  - runtime state: $STATE_ROOT"
 
 if [[ -f "$PROJECT_STATE_SCRIPT" ]]; then
