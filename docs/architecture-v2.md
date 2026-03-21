@@ -56,15 +56,19 @@ tags: [architecture, refactor, v2]
 │   ├── templates/
 │   ├── references/
 │   └── tools/
-└── agents/                         #   代理配置
+└── agents/                         #   多平台适配配置（如 OpenAI）
 
 <project>/.pensieve/                # 项目级（每项目独立，纳入版本控制）
 ├── maxims/                         #   工程准则
 ├── decisions/                      #   架构决策
 ├── knowledge/                      #   缓存的探索结果
 ├── pipelines/                      #   可复用工作流
-├── state.md                        #   动态：生命周期状态 + 知识图谱
+├── short-term/                     #   短期暂存（TTL 到期后 promote 或删除）
+├── state.md                        #   动态：生命周期状态（图谱为引用指针）
 └── .state/                         #   运行时产物（gitignored）
+
+<project>/.claude/agents/           # Claude Code 自定义 agent（init 时从模板播种）
+└── pensieve-wand.md                #   知识检索 agent（双系统决策）
 ```
 
 ### 2.2 关键设计决策
@@ -127,7 +131,7 @@ description: >-
 
 ## Project Data
 项目级用户数据存储在 `<project-root>/.pensieve/`。
-当前项目的生命周期状态和知识图谱见 `.pensieve/state.md`。
+当前项目的生命周期状态见 `.pensieve/state.md`；知识图谱见 `.pensieve/.state/pensieve-user-data-graph.md`（按需读取）。
 ```
 
 此文件**由 git 跟踪**（不 gitignore），仅通过 `git pull` 更新。它是 skill 的接口声明，由 skill 维护者编写，用户不应修改。init 脚本不再生成它。
