@@ -164,12 +164,21 @@ project_root() {
     # Try git first from the caller's directory.
     # But skip if the result is the skill root itself (v2: skill root is a
     # separate git repo at user-level, not the project).
+    # Also skip if the result is a git submodule — walk up to the parent repo.
     local git_root
     if git_root="$(git -C "$start_dir" rev-parse --show-toplevel 2>/dev/null)"; then
         git_root="$(to_posix_path "$git_root")"
         local sr_check
         if sr_check="$(skill_root "$caller" 2>/dev/null)" && [[ "$git_root" == "$sr_check" ]]; then
             : # git root is the skill root, not the project — skip
+        elif git -C "$git_root" rev-parse --show-superproject-working-tree >/dev/null 2>&1 \
+             && [[ -n "$(git -C "$git_root" rev-parse --show-superproject-working-tree 2>/dev/null)" ]]; then
+            # git root is a submodule — use the parent (superproject) instead
+            local super
+            super="$(git -C "$git_root" rev-parse --show-superproject-working-tree 2>/dev/null)"
+            super="$(to_posix_path "$super")"
+            echo "$super"
+            return 0
         else
             echo "$git_root"
             return 0
