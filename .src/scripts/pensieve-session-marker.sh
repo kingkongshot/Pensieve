@@ -246,6 +246,23 @@ if initialized and self_check_ok:
     if _st_due > 0:
         ctx += f"\n\n短期记忆待整理：{_st_due} 条已到期（共 {_st_total} 条）。可运行 pensieve refine 完成处理。"
 
+    # Inject knowledge graph into session context (replaces CLAUDE.md "会话启动" instruction).
+    _graph_file = Path(project_root) / ".pensieve" / ".state" / "pensieve-user-data-graph.md"
+    if _graph_file.is_file():
+        _graph_text = _graph_file.read_text(encoding="utf-8", errors="replace")
+        # Truncate very large graphs to avoid context bloat (keep under ~4k chars).
+        if len(_graph_text) > 4000:
+            _graph_text = _graph_text[:4000] + "\n... (truncated)"
+        ctx += f"\n\n## Pensieve Knowledge Graph\n\n{_graph_text}"
+
+    # Clean up session-selfimprove-done marker from previous session.
+    _selfimprove_marker = Path(project_root) / ".pensieve" / ".state" / "session-selfimprove-done"
+    if _selfimprove_marker.exists():
+        try:
+            _selfimprove_marker.unlink()
+        except OSError:
+            pass
+
     payload = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
