@@ -1,20 +1,21 @@
 #!/bin/bash
 # Stop hook — per-turn auto-sediment trigger.
 #
-# Triggers /pensieve self-improve on every turn that passes all 6 filters:
+# Triggers /pensieve self-improve on every turn that passes all 5 filters:
 # - Hook is not in a recursion (stop_hook_active != true)
 # - Project has .pensieve/ initialized
 # - Ralph-Loop is not active (don't interfere)
 # - Working tree is clean (commit pipeline handles dirty trees)
-# - Cooldown has elapsed (default 600s since last sediment)
 # - Last assistant message is substantial (default ≥ 200 chars)
 #
-# Rate limiting is provided by cooldown + git_clean + recursion_guard naturally:
+# Rate limiting is event-driven via git_clean + recursion_guard:
 # - After sediment fires, Claude continues → stop_hook_active=true → recursion_guard SKIP
-# - After continuation, new short-term files → git_clean FAIL → SKIP
-# - Within 10min of last sediment → cooldown FAIL → SKIP
-# Long sessions can legitimately sediment multiple distinct insights as long as
-# 10min+ and commit boundaries separate them.
+# - After continuation, new short-term files → git_clean FAIL → SKIP until user commits
+# - Commit → git_clean PASS → next substantial turn can sediment again
+#
+# No time-based cooldown by design: any turn could be the last one, and time-based
+# throttling would permanently drop insights that happen within the cooldown window.
+# Event-driven throttling (git_clean) is tied to user workflow, not wall clock.
 #
 # On all-pass: outputs decision:block + signal evaluation prompt.
 # Claude continues one turn to evaluate signals and run /pensieve self-improve,
@@ -28,8 +29,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
-# Tunables (override via environment)
-COOLDOWN_SECONDS="${PENSIEVE_SEDIMENT_COOLDOWN:-600}"
+# Tunable: minimum last_assistant_message length to consider "substantial"
 MIN_MSG_LENGTH="${PENSIEVE_SEDIMENT_MIN_LENGTH:-200}"
 
 # --- Read payload ---
@@ -78,24 +78,10 @@ if cd "$PROJECT_ROOT" 2>/dev/null && git rev-parse --git-dir >/dev/null 2>&1; th
   [[ "$UNCOMMITTED" -gt 0 ]] && exit 0
 fi
 
-# --- Filter 4: Cooldown ---
-LAST_SEDIMENT_FILE="$STATE_ROOT/last-sediment-time"
-if [[ -f "$LAST_SEDIMENT_FILE" ]]; then
-  LAST_EPOCH=$(cat "$LAST_SEDIMENT_FILE" 2>/dev/null || echo 0)
-  if [[ "$LAST_EPOCH" -gt 0 ]]; then
-    NOW_EPOCH=$(date -u +%s)
-    ELAPSED=$((NOW_EPOCH - LAST_EPOCH))
-    [[ "$ELAPSED" -lt "$COOLDOWN_SECONDS" ]] && exit 0
-  fi
-fi
-
-# --- Filter 5: Message substantial ---
+# --- Filter 4: Message substantial ---
 [[ "$LAST_MSG_LEN" -lt "$MIN_MSG_LENGTH" ]] && exit 0
 
 # --- All filters passed: fire sediment evaluation ---
-# Record timestamp before outputting JSON (drives cooldown on next turn).
-date -u +%s > "$LAST_SEDIMENT_FILE" 2>/dev/null
-
 cat <<'JSON'
 {
   "decision": "block",
