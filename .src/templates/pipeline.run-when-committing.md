@@ -15,6 +15,15 @@ gate: auto
 
 # 提交 Pipeline
 
+> **⚠️ 手动参考文档，不是自动机制**
+>
+> 本 pipeline 没有自动触发路径：Claude Code 没有 commit 事件 hook，
+> 运行 `git commit` 不会触发 pipeline Task 1/2。
+>
+> 自动沉淀由 `stop-hook-auto-sediment.sh` 在每个 substantial 轮触发。
+> 本文件作为手动参考：信号清单和 self-improve 流程与 auto-sediment hook
+> 的 prompt 一致，两者互为备份。
+
 提交前自动从会话上下文 + diff 中提取洞察并沉淀，然后执行原子化提交。全程不询问用户确认。
 
 **自改进参考**：`.src/tools/self-improve.md`

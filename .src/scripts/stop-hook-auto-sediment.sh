@@ -1,21 +1,23 @@
 #!/bin/bash
 # Stop hook — per-turn auto-sediment trigger.
 #
-# Triggers /pensieve self-improve on every turn that passes all 5 filters:
+# Triggers /pensieve self-improve on every turn that passes all 4 filters:
 # - Hook is not in a recursion (stop_hook_active != true)
 # - Project has .pensieve/ initialized
 # - Ralph-Loop is not active (don't interfere)
-# - Working tree is clean (commit pipeline handles dirty trees)
 # - Last assistant message is substantial (default ≥ 200 chars)
 #
-# Rate limiting is event-driven via git_clean + recursion_guard:
+# Recursion prevention only:
 # - After sediment fires, Claude continues → stop_hook_active=true → recursion_guard SKIP
-# - After continuation, new short-term files → git_clean FAIL → SKIP until user commits
-# - Commit → git_clean PASS → next substantial turn can sediment again
+# - No time cooldown, no git state check: every substantial turn is a sediment opportunity
+# - Quality control is delegated to Claude's continuation (evaluate signal checklist, output NO_SEDIMENT if no signals)
 #
-# No time-based cooldown by design: any turn could be the last one, and time-based
-# throttling would permanently drop insights that happen within the cooldown window.
-# Event-driven throttling (git_clean) is tied to user workflow, not wall clock.
+# Design notes:
+# - No git_clean filter: relying on "commit pipeline handles dirty trees" is a fiction —
+#   commit pipeline has no automatic trigger, so uncommitted-change turns would simply lose
+#   their insights if we skipped them here. Instead, trust Claude to evaluate each turn.
+# - No cooldown: any turn could be the last, time throttling drops insights permanently.
+# - No session counter: long sessions can legitimately have multiple distinct insights.
 #
 # On all-pass: outputs decision:block + signal evaluation prompt.
 # Claude continues one turn to evaluate signals and run /pensieve self-improve,
@@ -71,14 +73,7 @@ for candidate in \
   fi
 done
 
-# --- Filter 3: Working tree clean (commit pipeline handles dirty trees) ---
-if cd "$PROJECT_ROOT" 2>/dev/null && git rev-parse --git-dir >/dev/null 2>&1; then
-  # grep -cv returns exit 1 on no matches; fallback to 0 via || echo 0
-  UNCOMMITTED=$(git status --porcelain 2>/dev/null | { grep -cv '^?? \.pensieve/\.state/' || echo 0; })
-  [[ "$UNCOMMITTED" -gt 0 ]] && exit 0
-fi
-
-# --- Filter 4: Message substantial ---
+# --- Filter 3: Message substantial ---
 [[ "$LAST_MSG_LEN" -lt "$MIN_MSG_LENGTH" ]] && exit 0
 
 # --- All filters passed: fire sediment evaluation ---
