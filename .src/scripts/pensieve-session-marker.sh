@@ -255,14 +255,6 @@ if initialized and self_check_ok:
             _graph_text = _graph_text[:4000] + "\n... (truncated)"
         ctx += f"\n\n## Pensieve Knowledge Graph\n\n{_graph_text}"
 
-    # Clean up session-selfimprove-done marker from previous session.
-    _selfimprove_marker = Path(project_root) / ".pensieve" / ".state" / "session-selfimprove-done"
-    if _selfimprove_marker.exists():
-        try:
-            _selfimprove_marker.unlink()
-        except OSError:
-            pass
-
     payload = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",

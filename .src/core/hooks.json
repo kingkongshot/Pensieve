@@ -52,15 +52,6 @@
         ]
       }
     ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/run-hook.sh\" session-end-selfimprove.sh"
-          }
-        ]
-      }
-    ]
+    "Stop": []
   }
 }
