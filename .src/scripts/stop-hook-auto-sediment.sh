@@ -1,14 +1,20 @@
 #!/bin/bash
 # Stop hook — per-turn auto-sediment trigger.
 #
-# Triggers /pensieve self-improve when:
+# Triggers /pensieve self-improve on every turn that passes all 6 filters:
 # - Hook is not in a recursion (stop_hook_active != true)
 # - Project has .pensieve/ initialized
 # - Ralph-Loop is not active (don't interfere)
 # - Working tree is clean (commit pipeline handles dirty trees)
 # - Cooldown has elapsed (default 600s since last sediment)
 # - Last assistant message is substantial (default ≥ 200 chars)
-# - Session hasn't already fired sediment (session-scoped counter)
+#
+# Rate limiting is provided by cooldown + git_clean + recursion_guard naturally:
+# - After sediment fires, Claude continues → stop_hook_active=true → recursion_guard SKIP
+# - After continuation, new short-term files → git_clean FAIL → SKIP
+# - Within 10min of last sediment → cooldown FAIL → SKIP
+# Long sessions can legitimately sediment multiple distinct insights as long as
+# 10min+ and commit boundaries separate them.
 #
 # On all-pass: outputs decision:block + signal evaluation prompt.
 # Claude continues one turn to evaluate signals and run /pensieve self-improve,
@@ -65,18 +71,14 @@ for candidate in \
   fi
 done
 
-# --- Filter 3: Session hasn't fired sediment yet ---
-COUNTER_FILE="$STATE_ROOT/auto-sediment-fired-${SESSION_ID:-nosession}"
-[[ -f "$COUNTER_FILE" ]] && exit 0
-
-# --- Filter 4: Working tree clean (commit pipeline handles dirty trees) ---
+# --- Filter 3: Working tree clean (commit pipeline handles dirty trees) ---
 if cd "$PROJECT_ROOT" 2>/dev/null && git rev-parse --git-dir >/dev/null 2>&1; then
   # grep -cv returns exit 1 on no matches; fallback to 0 via || echo 0
   UNCOMMITTED=$(git status --porcelain 2>/dev/null | { grep -cv '^?? \.pensieve/\.state/' || echo 0; })
   [[ "$UNCOMMITTED" -gt 0 ]] && exit 0
 fi
 
-# --- Filter 5: Cooldown ---
+# --- Filter 4: Cooldown ---
 LAST_SEDIMENT_FILE="$STATE_ROOT/last-sediment-time"
 if [[ -f "$LAST_SEDIMENT_FILE" ]]; then
   LAST_EPOCH=$(cat "$LAST_SEDIMENT_FILE" 2>/dev/null || echo 0)
@@ -87,12 +89,11 @@ if [[ -f "$LAST_SEDIMENT_FILE" ]]; then
   fi
 fi
 
-# --- Filter 6: Message substantial ---
+# --- Filter 5: Message substantial ---
 [[ "$LAST_MSG_LEN" -lt "$MIN_MSG_LENGTH" ]] && exit 0
 
 # --- All filters passed: fire sediment evaluation ---
-# Mark session as fired and record timestamp before outputting JSON.
-touch "$COUNTER_FILE" 2>/dev/null
+# Record timestamp before outputting JSON (drives cooldown on next turn).
 date -u +%s > "$LAST_SEDIMENT_FILE" 2>/dev/null
 
 cat <<'JSON'
