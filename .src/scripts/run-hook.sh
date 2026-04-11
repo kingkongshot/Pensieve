@@ -81,4 +81,19 @@ export PENSIEVE_SKILL_ROOT="$ROOT"
   exit 1
 }
 
-exec bash "$TARGET" "$@"
+# --- Hook trace logging ---
+# Append one line per hook invocation to .state/hook-trace.log for diagnostics.
+# Format: ISO-timestamp script-name args... → exit-code
+_HOOK_LOG_DIR="${PENSIEVE_PROJECT_ROOT:+$PENSIEVE_PROJECT_ROOT/.pensieve/.state}"
+_HOOK_LOG="${_HOOK_LOG_DIR:+$_HOOK_LOG_DIR/hook-trace.log}"
+
+if [[ -n "$_HOOK_LOG" && -d "$_HOOK_LOG_DIR" ]]; then
+  _hook_rc=0
+  bash "$TARGET" "$@" || _hook_rc=$?
+  printf '%s %s %s → %d\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SCRIPT_NAME" "$*" "$_hook_rc" \
+    >> "$_HOOK_LOG" 2>/dev/null
+  exit "$_hook_rc"
+else
+  exec bash "$TARGET" "$@"
+fi
