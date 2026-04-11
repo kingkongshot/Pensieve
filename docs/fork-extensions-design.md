@@ -19,11 +19,13 @@ tags: [fork, extension, auto-sediment, hooks, planning-retrieval, design-intent]
 
 1. **规划前知识检索**（PreToolUse/EnterPlanMode + Skill hook）
 2. **会话启动知识图谱注入**（SessionStart hook 增强）
-3. **每轮自动沉淀评估**（Stop hook，fork 独有）
+3. **每轮自动沉淀评估**（Stop hook，fork 独有）—— 支持两种执行模式：
+   - **inline**（默认，v1.4.0）：主会话续轮直接执行 `/pensieve self-improve`
+   - **dispatch**（v1.5.0+）：主会话只输出 `SEDIMENT_SCHEDULED:<label>` 决策行，Stop hook 第二次触发时后台启动 sidecar CLI 异步执行 self-improve，主会话开销 20-50k → ~700 token
 
 以及一个 hook 生命周期自管理系统（`hooks.json` + `register-hooks.sh`），让 `init` 能自动注册全部 hook，避免用户手动编辑 `settings.json`。
 
-所有扩展都经过 2026-04-09 ~ 2026-04-10 的完整 probe 实验端到端验证。三个月内三次 `verify-before-sediment` 应用（session_counter / cooldown / git_clean 过滤器的移除）留下了珍贵的元教训：**绝不在未读上游设计的前提下，把自己的期待投射到上游文件上**。
+所有扩展都经过 2026-04-09 ~ 2026-04-11 的完整 probe 实验端到端验证。三个月内 **三次 `verify-before-sediment` 应用**（session_counter / cooldown / git_clean 过滤器的移除）+ **一次 codex 独立评审捕获 2 个 self-review 漏掉的 P1 bug**（head-c 管道 SIGPIPE + PID 锁 TOCTOU），留下了珍贵的元教训：**绝不在未读上游设计的前提下把自己的期待投射上去，也绝不用 self-review 代替独立评审**。
 
 ---
 
@@ -232,7 +234,69 @@ Claude 续轮评估
 stop_hook_active = true → recursion_guard FAIL → exit 0
 ```
 
-### 4.4 Planning prehook 流程
+### 4.4 Dispatch mode 扩展流程（v1.5.0+）
+
+`inline` 模式（§4.3）的代价：命中沉淀时主 Claude 续轮调用 `/pensieve self-improve`，读 graph / maxims / decisions / knowledge + 写 short-term，消耗 **20-50k 主会话 token、耗时 30-120 秒**。`dispatch` 模式把"决策"留在主会话（~700 token），"执行"卸到 sidecar CLI 进程异步完成（主会话零感知）。
+
+```
+Turn N 结束（主会话）
+  ↓
+Stop hook #1 触发 (stop_hook_active=false)
+  ├─ 过滤器全 PASS
+  └─ 落盘 payload → decision:block + 评估 prompt（dispatch 版本）
+  ↓
+主 Claude 续轮:
+  ├─ 命中 → 输出: "SEDIMENT_SCHEDULED: <关键词>\n<1 句理由>"
+  └─ 未命中 → "NO_SEDIMENT: <理由>"
+  ↓
+主 Claude stop
+  ↓
+Stop hook #2 触发 (stop_hook_active=true)
+  ↓
+handle_post_dispatch() (在 recursion_guard 之前):
+  ├─ 读 last_assistant_message
+  ├─ [[ "$msg" == SEDIMENT_SCHEDULED:* ]] 首字符严格匹配（非 grep -E）
+  ├─ 原子 mkdir "$lock_dir" 获取并发锁（非 TOCTOU PID file）
+  │  ├─ 成功 → 写 $BASHPID 到 lock_dir/pid
+  │  └─ 失败 → stale detection (kill -0 前 PID) → 继续或 skip
+  ├─ awk 提取 label，bash ${label:0:120} 字符截断（非 head -c，SIGPIPE-safe）
+  ├─ subshell:
+  │  (
+  │    mkdir lock_dir + trap 'rm -rf lock_dir' EXIT
+  │    cd $pr; export PENSIEVE_PROJECT_ROOT=$pr
+  │    nohup timeout 300 claude -r <sid> -p "<executor prompt>" \
+  │      --bare --permission-mode bypassPermissions \
+  │      >> sidecar-sediment.log 2>&1
+  │  ) </dev/null >/dev/null 2>&1 & disown
+  └─ 写 dispatch-launch 到 hook-trace.log
+  ↓
+recursion_guard exit 0
+  ↓
+(异步) sidecar 进程: claude -r 恢复 post-compact 活跃上下文 (~10-19 turns)
+  ├─ 调用 /pensieve self-improve
+  ├─ 写入 short-term
+  └─ 进程退出 → trap 清理 lock_dir
+```
+
+**关键技术细节**（均来自 2026-04-11 probe 实证 + codex review 修复）：
+
+- **claude CLI 的 flag 组合**：`-r <sid> -p "..." --bare --permission-mode bypassPermissions`。**不能带 `--no-session-persistence`**（与 `-r` 互斥，尽管 --help 说"only works with --print"）。见 `knowledge/claude-cli-sidecar-pattern`。
+- **Sidecar 视角 = 主会话 post-compact 活跃上下文**（~10-19 turns），不是完整 transcript.jsonl（可能数百 turns）。这正是主会话 Claude 的"工作记忆"。见 `knowledge/claude-cli-sidecar-context-scope`。
+- **PID 锁的原子性**：用 `mkdir` 而非 PID 文件检查。`mkdir` 是 POSIX 原子操作，"check + acquire"融合为一步，消除 TOCTOU window。PID 只用于崩溃后的 stale detection。
+- **`$BASHPID` 而非 `$$`**：subshell 中 `$$` 仍返回父进程 PID，导致 hook 退出后 lock 被误判 stale。`$BASHPID` (bash 4+) 返回 subshell 真实 PID。
+- **`head -c N` 在 pipeline + pipefail 会 SIGPIPE 杀脚本**：上游命令写入已关闭 stdin 收到 SIGPIPE，pipefail 把非零传播为管道失败，set -e 杀脚本。改用 bash `${var:0:N}` 参数展开（既 SIGPIPE-safe 又 UTF-8 字符感知）。见 `knowledge/bash-head-c-pipefail-sigpipe-trap`。
+- **`nohup` + subshell 双重 detach**：subshell 提供 I/O 隔离（`</dev/null >/dev/null 2>&1`），`nohup` 提供 SIGHUP 免疫，`disown` 移出 shell job table。Belt-and-suspenders。
+- **主会话开销对比**：
+
+  | 维度 | inline | dispatch |
+  |------|--------|----------|
+  | 命中沉淀主会话 token | 20-50k | ~700 |
+  | 命中沉淀延迟 | 30-120s | 3-10s（sidecar 异步 5-30s 后落盘）|
+  | 未命中主会话 token | ~600 | ~600 |
+  | 可见性 | 完整 self-improve 过程 | 仅 SEDIMENT_SCHEDULED 标签行 |
+  | 失败可见性 | 主会话输出 | sidecar-sediment.log |
+
+### 4.5 Planning prehook 流程
 
 ```
 Claude 调用 EnterPlanMode 或 Skill(plan-*/autoplan/office-hours)
@@ -323,6 +387,36 @@ feature/auto-sediment-hook (0d06592 → ca278b2)
 - **规则 7**：文档中的流程 ≠ 实际运行的机制——任何依赖"另一个机制会处理 X"的设计必须验证触发路径
 - **规则 8**：读上游设计时先问"作者想表达什么"，不是"我期待什么"——与自己理解冲突时默认是自己读错了
 - **规则 9**：不要给上游文件加"纠错性注释"——警告块等于把"我的误解"永久刻在上游文件里
+
+### 5.4 Dispatch mode probe + codex review（2026-04-11）
+
+v1.5.0 dispatch mode 的实施按以下阶段推进：
+
+1. **设计阶段**：列出 4 个未知点 P1/P2a/P2c/P3（transcript 写入时机 / sidecar 恢复 / slash command 触发 / nohup 非阻塞）
+2. **Probe 阶段**：写 `stop-hook-sidecar-probe.sh`，手动执行：
+   - P1 初版 FAIL 根因：`jq -sr` 查询只看最后一条 assistant entry，但那可能是 tool_use 不含 text；修正查询后改为"payload signature 是否出现在 transcript" → PASS
+   - P2a 初版 FAIL 根因：`--no-session-persistence` 与 `-r` 互斥，sidecar 启动新会话而不恢复主会话；移除该 flag 后 HISTORY_COUNT=10-19 → PASS
+   - P2c PASS：sidecar 跑 `/pensieve doctor`，`.state/pensieve-doctor-summary.json` mtime 确实更新，证明 `--bare` 下 slash command 仍可执行
+   - P3 PASS：nohup subshell 1ms 启动，非阻塞
+3. **实施阶段**：写 `handle_post_dispatch` + dispatch prompt 变体 + post-dispatch hook 分支（复用 Stop hook 第二次触发的"浪费"槽位）
+4. **Self-review 阶段**：自审过一遍，认为通过
+5. **Codex review 阶段**：`/codex review` 独立评审，**捕获 2 个 P1 + 5 个 P2**，self-review 完全漏掉：
+
+   | 严重度 | 位置 | 问题 | 修复 |
+   |------|------|------|------|
+   | P1 | `auto-sediment.sh:82` | PID 锁 TOCTOU 竞争（check-then-acquire 非原子）| `mkdir` 原子锁（POSIX 保证）|
+   | P1 | `auto-sediment.sh:96` | `awk \| head -c 120` 在 pipefail 下触发 SIGPIPE 杀 hook | `${label:0:120}` bash 参数展开截断 |
+   | P2 | `auto-sediment.sh:64` | `grep -qE "^..."` 匹配任意行而非首行 | `[[ "$msg" == SEDIMENT_SCHEDULED:* ]]` bash pattern |
+   | P2 | `auto-sediment.sh:78` | `mkdir -p` 未兜底，set -e 下可杀 hook | `mkdir -p ... \|\| return 0` |
+   | P2 | `auto-sediment.sh:123` | `disown` 非交互 shell 下形同虚设 | 加 `nohup` 前缀 |
+   | P2 | `auto-sediment.sh:53` | `PENSIEVE_SEDIMENT_MODE` 未校验，拼写错误静默回退 | `${,,}` + `case` 白名单 |
+   | P2 | `probe.sh:271` | P3 probe 测 `nohup sleep 8` 但生产用 subshell wrapper | 同步两处 detach shape |
+
+6. **修复阶段**：逐一修复 + 单元测试 + 再 probe
+7. **元教训**：
+   - **独立评审不可替代**：self-review 有"代码是我写的"的 halo，会聚焦"显式 `|| true`"而漏掉"隐式上游 SIGPIPE"。Codex 没有这个 halo，一眼看到 `head -c N` 就想到 SIGPIPE。**生产代码改动必须走独立评审**，哪怕 self-review 已经过。
+   - **probe 设计缺陷**：P3 probe 测的是 proxy（`nohup sleep`），不是生产代码实际的 detach shape（subshell + nohup + disown 组合）。probe **必须测真实使用的技术路径**，不是近似物。
+   - **pipefail + 截断工具是 bash 陷阱家族**：`grep -v` 空输入（2026-04-10 发现）+ `head -c N` SIGPIPE（2026-04-11 发现）是同一族陷阱的不同实例。已在 `knowledge/bash-head-c-pipefail-sigpipe-trap` 沉淀完整反模式。
 
 ---
 
@@ -418,6 +512,35 @@ export PENSIEVE_SEDIMENT_MIN_LENGTH=500
 
 编辑 `~/.claude/settings.json`，删除 Stop hook 中的 auto-sediment 条目。或者在 `hooks.json` 中删除 Stop 部分然后重跑 `register-hooks.sh`。
 
+### 7.5 启用 dispatch mode（v1.5.0+）
+
+默认是 `inline` 模式（保守，向后兼容）。启用 `dispatch` 模式需要**修改 `settings.json` 的 Stop hook command 字段前缀**，因为 Claude Code 的 hook config 不支持独立的 `env` 字段（见 `knowledge/claude-code-hook-command-env-injection`）。
+
+**启用步骤**：
+
+1. 编辑 `~/.claude/settings.json`，找到 Stop hook 条目，把：
+   ```
+   bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/run-hook.sh" stop-hook-auto-sediment.sh
+   ```
+   改成：
+   ```
+   PENSIEVE_SEDIMENT_MODE=dispatch bash "${PENSIEVE_SKILL_ROOT:-$HOME/.claude/skills/pensieve}/.src/scripts/run-hook.sh" stop-hook-auto-sediment.sh
+   ```
+2. **重启 Claude Code 会话**（hook config 在启动时缓存，不重启不生效）
+3. 下一轮 substantial turn 结束后观察：
+   - 主会话续轮只输出 `SEDIMENT_SCHEDULED: <label>` 或 `NO_SEDIMENT: ...`
+   - `.pensieve/.state/sidecar-sediment.log` 记录 sidecar 执行过程
+   - `.pensieve/.state/hook-trace.log` 含 `dispatch-launch: sid=... label=...` 行
+
+**环境变量 normalize**：`PENSIEVE_SEDIMENT_MODE` 会被 `${,,}` 小写化 + `case inline|dispatch) ;; *) inline ;; esac` 白名单。拼写错误（如 `DISPATCH`、`dispath`）中大写能被 normalize，非法值静默回退 `inline`。
+
+**回退到 inline**：删除 command 字段的 env 前缀 + 重启 Claude Code。
+
+**dispatch 模式的可观测性**：
+- **成功标志**：`hook-trace.log` 有 `dispatch-launch` 行 + `sidecar-sediment.log` 有 sidecar 完整输出（包括 sediment 的 Write tool 调用或 `NO_SEDIMENT` 行）
+- **sidecar 失败**：`sidecar-sediment.log` 的 stderr + exit code 可追溯（如 "No conversation found with session ID" 表示 session UUID 不对）
+- **并发跳过**：`hook-trace.log` 有 `dispatch-skip: prev sidecar alive pid=...` 行（正常，非错误）
+
 ---
 
 ## 8. 相关沉淀条目（知识库证据链）
@@ -430,17 +553,21 @@ export PENSIEVE_SEDIMENT_MIN_LENGTH=500
 ### 8.2 Hook 技术基础
 - `knowledge/stop-hook-per-turn-pattern/content.md` — per-turn 沉淀的技术模式
 - `knowledge/claude-code-hook-config-startup-cache/content.md` — hook 配置在会话启动时缓存
-- `knowledge/claude-cli-sidecar-pattern/content.md` — claude CLI sidecar flag 组合
+- `knowledge/claude-code-hook-command-env-injection/content.md` — hook config 无 env 字段，env 必须写 command 前缀
+- `knowledge/claude-cli-sidecar-pattern/content.md` — claude CLI sidecar flag 组合（含 2026-04-11 修正：`--no-session-persistence` 与 `-r` 互斥 + UUID 格式要求 + `$BASHPID` 替代 `$$`）
+- `knowledge/claude-cli-sidecar-context-scope/content.md` — sidecar 看到的是主会话 post-compact 活跃上下文
 - `knowledge/claude-code-session-id-discovery/content.md` — session ID 文件系统发现
 
 ### 8.3 实现陷阱
 - `knowledge/bash-grep-v-pipefail-trap/content.md` — `grep -v` 在 pipefail + 空输入下杀脚本
+- `knowledge/bash-head-c-pipefail-sigpipe-trap/content.md` — `head -c N` 在 pipefail 下触发上游 SIGPIPE 杀脚本（pipefail 陷阱家族的第 2 个实例）
 - `knowledge/pensieve-status-allowed-values/content.md` — frontmatter status 字段仅允许 active/archived/draft
 
 ### 8.4 设计决策
 - `decisions/2026-04-09-compound-knowledge-mechanisms.md` — 从 CE 提取机制的总决策
 - `decisions/2026-04-09-stop-hook-per-turn-semantics.md` — 初次放弃自动沉淀（archived）
 - `decisions/2026-04-10-per-turn-sediment-validated.md` — per-turn 方案验证通过 + 修正历程
+- `decisions/2026-04-11-sidecar-sediment-dispatch-design.md` — dispatch mode 设计 + 4 probe 结果 + codex review 修复（status: hypothesis，待端到端运行稳定后 promote）
 
 ### 8.5 元教训
 - `maxims/verify-before-sediment.md` — 沉淀前先验证的反模式（3 个犯错场景 + 9 条规则）
@@ -458,7 +585,8 @@ export PENSIEVE_SEDIMENT_MIN_LENGTH=500
 | 版本 | 日期 | 分支 | 关键改动 |
 |------|------|------|---------|
 | 1.3.0 | 2026-04-09 | feature/hook-lifecycle-and-planning-pipeline | Hook 自管理 + 规划前检索 + commit/review pipeline 增强 |
-| 1.4.0 | 2026-04-10 | feature/auto-sediment-hook | Per-turn auto-sediment hook |
+| 1.4.0 | 2026-04-10 | feature/auto-sediment-hook | Per-turn auto-sediment hook（inline mode） |
+| 1.5.0 | 2026-04-11 | feature/auto-sediment-hook | Dispatch mode: 主会话只做决策 + sidecar 异步执行 self-improve（主会话开销 20-50k → ~700 token）。含 codex review 修复的 2 P1 + 5 P2 bug。默认 inline 向后兼容，`PENSIEVE_SEDIMENT_MODE=dispatch` 启用。 |
 
 ## 附录 B：贡献者
 
