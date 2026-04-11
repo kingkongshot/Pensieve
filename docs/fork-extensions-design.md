@@ -13,6 +13,26 @@ tags: [fork, extension, auto-sediment, hooks, planning-retrieval, design-intent]
 > 上游作者的原设计见 `README.md`、`docs/architecture-v2.md`、`.src/references/`。
 > 本 fork 的扩展与上游**独立并列**，不替代、不互补上游的任何机制。
 
+---
+
+> ## ⚠️ 2026-04-11 重大更新：Dispatch 模式已放弃
+>
+> 本文档 §0、§4.4、§5.4、§7.5、Appendix A v1.5.0 描述的 **sidecar dispatch 模式**在真实生产路径下稳定阻塞失败（复杂 sidecar prompt 触发 claude CLI 静默 timeout，详见 `decisions/2026-04-11-sidecar-sediment-dispatch-design.md` 的"2026-04-11 回滚记录"），用户判定不可控并放弃。
+>
+> **现状**：auto-sediment 保留 **inline 模式**，新增 `.pensieve/config.json` 开关：
+>
+> ```json
+> { "auto_sediment": { "enabled": true } }
+> ```
+>
+> - 文件缺失或字段缺失 → 默认启用（向后兼容）
+> - `enabled: false` → 静默跳过，无需重启 Claude Code
+> - 热加载：每次 Stop hook fire 重新读文件
+>
+> 本文档所有涉及 dispatch 模式的段落**保留为历史设计档案**，实施时请忽略。
+
+---
+
 ## 0. 摘要
 
 本 fork 在不修改上游核心设计的前提下，增加三层 hook 扩展：
