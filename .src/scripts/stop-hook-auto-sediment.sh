@@ -67,26 +67,43 @@ handle_post_dispatch() {
   local last_msg="$1"
   local session_id="$2"
 
-  # Fast path: bash pattern match enforces "starts exactly with marker".
-  # `grep -qE '^SEDIMENT_SCHEDULED:'` would match any line, so a main-Claude
-  # reply that leads with prose and has the marker on a later line would
-  # trigger dispatch with an empty label. We want first-char-only.
-  [[ "$last_msg" == SEDIMENT_SCHEDULED:* ]] || return 0
-
-  # Resolve project (skip silently if non-pensieve)
+  # Resolve project upfront (skip silently if non-pensieve). Done before
+  # the marker check so the no-hit path can also record a trace entry —
+  # previously NO_SEDIMENT turns were completely silent in hook-trace.log,
+  # making it impossible to verify dispatch mode was running at all without
+  # waiting for an actual sediment hit.
   local pr
   pr="$(project_root 2>/dev/null)" || return 0
   [[ -d "$pr/.pensieve" ]] || return 0
 
-  # Require claude CLI in PATH
-  command -v claude >/dev/null 2>&1 || return 0
-
   local state_dir="$pr/.pensieve/.state"
-  local lock_dir="$state_dir/sidecar-sediment.lock"
-  local sidecar_log="$state_dir/sidecar-sediment.log"
   local trace_log="$state_dir/hook-trace.log"
   # Guarded mkdir: on full/permission-denied disks the hook must still return 0.
   mkdir -p "$state_dir" 2>/dev/null || return 0
+
+  # Skip-path visibility: log NO_SEDIMENT / non-marker replies so dispatch
+  # mode produces one hook-trace entry per post-dispatch fire. Pairs with
+  # the dispatch-prompt entry from the first-fire side.
+  # Fast path: bash pattern match enforces "starts exactly with marker".
+  # `grep -qE '^SEDIMENT_SCHEDULED:'` would match any line, so a main-Claude
+  # reply that leads with prose and has the marker on a later line would
+  # trigger dispatch with an empty label. We want first-char-only.
+  if [[ "$last_msg" != SEDIMENT_SCHEDULED:* ]]; then
+    local head_msg="${last_msg:0:60}"
+    head_msg="${head_msg//$'\n'/ }"
+    printf '[%s] dispatch-skip: sid=%s head=%s\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      "${session_id:-unknown}" \
+      "${head_msg:-<empty>}" \
+      >> "$trace_log" 2>/dev/null || true
+    return 0
+  fi
+
+  # Require claude CLI in PATH
+  command -v claude >/dev/null 2>&1 || return 0
+
+  local lock_dir="$state_dir/sidecar-sediment.lock"
+  local sidecar_log="$state_dir/sidecar-sediment.log"
 
   # Extract first line's label. IMPORTANT: do NOT pipe into `head -c 120`.
   # Under `set -o pipefail`, head closing stdin after N bytes causes SIGPIPE
@@ -227,6 +244,13 @@ done
 # Two prompt variants: dispatch mode asks main Claude for a marker only, inline
 # mode asks for direct /pensieve self-improve execution.
 if [[ "$SEDIMENT_MODE" == "dispatch" ]]; then
+  # Visibility: record the first-fire decision-request so hook-trace.log
+  # pairs dispatch-prompt (fire) with dispatch-skip / dispatch-launch (post).
+  printf '[%s] dispatch-prompt: sid=%s msg_len=%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    "${SESSION_ID:-unknown}" \
+    "$LAST_MSG_LEN" \
+    >> "$STATE_ROOT/hook-trace.log" 2>/dev/null || true
 cat <<'JSON'
 {
   "decision": "block",
