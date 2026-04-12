@@ -240,6 +240,11 @@ stop-hook-auto-sediment.sh
   ├─ 过滤器 2:   ralph_loop — 非 active
   ├─ 过滤器 3:   substantial — last_assistant_message 长度 ≥ 200
   └─ 过滤器 4:   pending_question — 末尾启发式未检测到"Claude 向用户提问等输入"
+  ↓
+Filter 3 pass 后 → record_filter_sample() 写全局样本日志
+  ~/.claude/.pensieve-filter-samples.jsonl (mode 600, 5MB rotation, 3 代)
+  记录 {ts, session, project, decision, msg_len, tail}
+  decision ∈ {filter4-blocked, sediment-fired}
   ↓ 全部 PASS
 输出 decision:block + 信号评估 prompt:
   [PENSIEVE AUTO-SEDIMENT CHECK]
@@ -622,6 +627,7 @@ export PENSIEVE_SEDIMENT_MIN_LENGTH=500
 | 1.4.0 | 2026-04-10 | feature/auto-sediment-hook | Per-turn auto-sediment hook（inline mode） |
 | 1.5.0 | 2026-04-11 | feature/auto-sediment-hook | **Dispatch mode 实验失败 + 回滚 + `.pensieve/config.json` 热加载开关**。dispatch mode（主会话只做决策 + sidecar 异步执行 self-improve，主会话开销 20-50k → ~700 token，含 codex review 修复的 2 P1 + 5 P2 bug）在真实生产路径下稳定阻塞失败（复杂 sidecar prompt 触发 claude CLI 静默 timeout），代码回滚至 inline 模式，新增 Filter 0.5 `config_toggle` 读取 `.pensieve/config.json` 的 `auto_sediment.enabled` 字段，支持按项目热关闭无需重启 Claude Code。§4.4/§5.4 保留 dispatch 设计作为历史档案。 |
 | 1.5.1 | 2026-04-11 | feature/auto-sediment-hook | **Filter 4 `pending_question` 启发式** — 检测 Claude 文字提问结束 turn 等用户输入的场景，避开 auto-sediment 空转续轮评估（每次 ~600-5000 token 浪费）。配合 CLAUDE.md "提问优先 AskUserQuestion" 软约束使用。启发式精度 70-85%，边界 case 会漏判但代价仅是少一次沉淀评估。记录 `filter4-question-detected` 到 `hook-trace.log` 用于后期观察质量。依据 `knowledge/auto-sediment-text-question-stop-waste`。 |
+| 1.5.2 | 2026-04-11 | feature/auto-sediment-hook | **Filter 样本全局日志** — stop-hook 在 Filter 3 pass 后记录样本到全局 `~/.claude/.pensieve-filter-samples.jsonl`（mode 600，5MB rotation 保留 3 代）。每条含 `{ts, session, project, decision, msg_len, tail}`，`decision` ∈ `{filter4-blocked, sediment-fired}`。用于后续离线分析 Filter 4 启发式的 precision（看 blocked 样本里是不是真问题）和 recall（看 sediment-fired 样本里哪些其实是漏检的隐形问题）。隐私：tail 可能含代码/secret，不要上传。 |
 
 ## 附录 B：贡献者
 

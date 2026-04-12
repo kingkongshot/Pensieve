@@ -61,10 +61,12 @@ fi
 STOP_HOOK_ACTIVE="missing"
 LAST_MSG=""
 LAST_MSG_LEN=0
+SESSION_ID=""
 if [[ -n "$HOOK_INPUT" ]] && command -v jq &>/dev/null; then
   STOP_HOOK_ACTIVE=$(echo "$HOOK_INPUT" | jq -r 'if has("stop_hook_active") then .stop_hook_active | tostring else "missing" end' 2>/dev/null || echo "error")
   LAST_MSG=$(echo "$HOOK_INPUT" | jq -r '.last_assistant_message // ""' 2>/dev/null || echo "")
   LAST_MSG_LEN=${#LAST_MSG}
+  SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // ""' 2>/dev/null || echo "")
 fi
 
 # --- Filter 0: Recursion guard ---
@@ -119,6 +121,43 @@ if [[ "$LAST_MSG_LEN" -gt 300 ]]; then
 else
   TAIL_MSG="$LAST_MSG"
 fi
+# --- Global sample log (for Filter 4 heuristic tuning) ---
+# 记录 Filter 3 pass 后的所有样本到全局 jsonl，用于离线分析：
+# - filter4-blocked 样本 → 人工审阅 Filter 4 的 precision（是不是真的是问题）
+# - sediment-fired 样本 → 对照 NO_SEDIMENT 续轮输出排查 recall（漏检的隐形问题）
+#
+# 存储：$HOME/.claude/.pensieve-filter-samples.jsonl（全局，跨项目汇总）
+# 权限：600（仅用户可读）
+# Rotation：> 5MB 时轮转保留 3 代
+# 隐私：tail 可能含代码/secret 片段，不要上传或分享
+SAMPLE_LOG="$HOME/.claude/.pensieve-filter-samples.jsonl"
+record_filter_sample() {
+  local decision="$1"
+  command -v jq &>/dev/null || return 0
+  mkdir -p "$(dirname "$SAMPLE_LOG")" 2>/dev/null || return 0
+
+  # Size rotation before write (5MB threshold)
+  if [[ -f "$SAMPLE_LOG" ]] && [[ $(stat -c %s "$SAMPLE_LOG" 2>/dev/null || echo 0) -gt 5242880 ]]; then
+    [[ -f "${SAMPLE_LOG}.2" ]] && mv -f "${SAMPLE_LOG}.2" "${SAMPLE_LOG}.3" 2>/dev/null || true
+    [[ -f "${SAMPLE_LOG}.1" ]] && mv -f "${SAMPLE_LOG}.1" "${SAMPLE_LOG}.2" 2>/dev/null || true
+    mv -f "$SAMPLE_LOG" "${SAMPLE_LOG}.1" 2>/dev/null || true
+  fi
+
+  # Append JSONL line
+  jq -nc \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg session "$SESSION_ID" \
+    --arg project "${PROJECT_ROOT:-}" \
+    --arg decision "$decision" \
+    --argjson msg_len "$LAST_MSG_LEN" \
+    --arg tail "$TAIL_MSG" \
+    '{ts:$ts, session:$session, project:$project, decision:$decision, msg_len:$msg_len, tail:$tail}' \
+    >> "$SAMPLE_LOG" 2>/dev/null || true
+
+  # Enforce 600 perms (newly-created file)
+  chmod 600 "$SAMPLE_LOG" 2>/dev/null || true
+}
+
 if [[ "$TAIL_MSG" =~ [\?？][[:space:]]*$ ]] \
    || [[ "$TAIL_MSG" =~ 要不要[^。]*$ ]] \
    || [[ "$TAIL_MSG" =~ 需要[我你]?[^。]*吗 ]] \
@@ -132,10 +171,12 @@ if [[ "$TAIL_MSG" =~ [\?？][[:space:]]*$ ]] \
   # Record for observability / heuristic iteration
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) filter4-question-detected" \
     >> "$STATE_ROOT/hook-trace.log" 2>/dev/null || true
+  record_filter_sample "filter4-blocked"
   exit 0
 fi
 
 # --- All filters passed: fire inline sediment evaluation ---
+record_filter_sample "sediment-fired"
 cat <<'JSON'
 {
   "decision": "block",
