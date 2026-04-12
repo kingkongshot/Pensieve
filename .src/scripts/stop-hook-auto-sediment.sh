@@ -10,6 +10,12 @@
 # - Filter 0.5:  .pensieve/config.json auto_sediment.enabled != false
 # - Filter 2:    Ralph-Loop is not active (don't interfere)
 # - Filter 3:    last assistant message is substantial (default ≥ 200 chars)
+# - Filter 4:    last message does NOT look like a pending question to the user
+#                (Claude asking and waiting for input → this turn is not a
+#                 sediment opportunity; skip evaluation. Heuristic based on
+#                 trailing punctuation and common Chinese/English question
+#                 patterns. See knowledge/auto-sediment-text-question-stop-waste
+#                 for rationale and cost analysis.)
 #
 # Recursion prevention:
 # - After sediment fires, Claude continues → stop_hook_active=true.
@@ -99,6 +105,35 @@ done
 
 # --- Filter 3: Message substantial ---
 [[ "$LAST_MSG_LEN" -lt "$MIN_MSG_LENGTH" ]] && exit 0
+
+# --- Filter 4: Pending question heuristic ---
+# 如果本轮 Claude 在向用户提问并等待输入（而非用 AskUserQuestion 工具），
+# 这个 turn 不是沉淀时机 —— 提问本身不是洞察，评估续轮大概率 NO_SEDIMENT
+# 白白消耗 ~600-5000 token。参见 knowledge/auto-sediment-text-question-stop-waste。
+#
+# 启发式：取最后 ~300 字节，检测常见中英文提问结尾/句式。
+# 精度目标 70-85%，误判为"问题"时代价仅为漏一次沉淀评估（可接受）。
+# 不用 pipe，避免 pipefail 陷阱。
+if [[ "$LAST_MSG_LEN" -gt 300 ]]; then
+  TAIL_MSG="${LAST_MSG:$(( LAST_MSG_LEN - 300 ))}"
+else
+  TAIL_MSG="$LAST_MSG"
+fi
+if [[ "$TAIL_MSG" =~ [\?？][[:space:]]*$ ]] \
+   || [[ "$TAIL_MSG" =~ 要不要[^。]*$ ]] \
+   || [[ "$TAIL_MSG" =~ 需要[我你]?[^。]*吗 ]] \
+   || [[ "$TAIL_MSG" =~ 是否[^。]*[\?？] ]] \
+   || [[ "$TAIL_MSG" =~ 你(想|觉得|希望|打算)[^。]*[\?？] ]] \
+   || [[ "$TAIL_MSG" =~ 哪[一个种][^。]*[\?？] ]] \
+   || [[ "$TAIL_MSG" =~ 请[选确][^。]*$ ]] \
+   || [[ "$TAIL_MSG" =~ [Ww]ould[[:space:]]+you ]] \
+   || [[ "$TAIL_MSG" =~ [Ww]hich[[:space:]] ]] \
+   || [[ "$TAIL_MSG" =~ [Ss]hould[[:space:]]+[IWwYy] ]]; then
+  # Record for observability / heuristic iteration
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) filter4-question-detected" \
+    >> "$STATE_ROOT/hook-trace.log" 2>/dev/null || true
+  exit 0
+fi
 
 # --- All filters passed: fire inline sediment evaluation ---
 cat <<'JSON'
