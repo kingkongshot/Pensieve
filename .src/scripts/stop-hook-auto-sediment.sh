@@ -73,6 +73,8 @@ fi
 # Hook-triggered continuation has stop_hook_active=true. Skip to prevent infinite loop.
 [[ "$STOP_HOOK_ACTIVE" == "true" ]] && exit 0
 
+SAMPLE_LOG="$HOME/.claude/.pensieve-filter-samples.jsonl"
+
 # --- Filter 1: Pensieve project ---
 PROJECT_ROOT="$(project_root 2>/dev/null)" || exit 0
 PENSIEVE_DIR="$PROJECT_ROOT/.pensieve"
@@ -121,18 +123,21 @@ if [[ "$LAST_MSG_LEN" -gt 300 ]]; then
 else
   TAIL_MSG="$LAST_MSG"
 fi
-# --- Global sample log (for Filter 4 heuristic tuning) ---
-# 记录 Filter 3 pass 后的所有样本到全局 jsonl，用于离线分析：
-# - filter4-blocked 样本 → 人工审阅 Filter 4 的 precision（是不是真的是问题）
-# - sediment-fired 样本 → 对照 NO_SEDIMENT 续轮输出排查 recall（漏检的隐形问题）
+# --- Sample log writer (for offline Filter 4 tuning) ---
+# 记录 Filter 4 放行的 turn 的 tail 到全局 jsonl，用于人工离线分析：
+# 在这些 turn 里找"其实是要求用户输入回答但 Filter 4 漏检的"— 这些是
+# Filter 4 正则调优的素材。
 #
-# 存储：$HOME/.claude/.pensieve-filter-samples.jsonl（全局，跨项目汇总）
-# 权限：600（仅用户可读）
-# Rotation：> 5MB 时轮转保留 3 代
-# 隐私：tail 可能含代码/secret 片段，不要上传或分享
-SAMPLE_LOG="$HOME/.claude/.pensieve-filter-samples.jsonl"
-record_filter_sample() {
-  local decision="$1"
+# 不做 decision 分类：判断 turn 是不是"要求用户输入"需要完整上下文，
+# 不能用 NO_SEDIMENT / 沉淀命中等运行时信号代替。样本只存原始 tail，
+# 人工看完整内容判断。
+#
+# 不记录 Filter 4 blocked 的 turn：用户指令"不保存被正确筛选的"。
+#
+# 存储：$HOME/.claude/.pensieve-filter-samples.jsonl
+# 权限：600；Rotation：> 5MB 轮转 3 代
+# 隐私：tail 可能含代码/secret，不要上传
+record_sample() {
   command -v jq &>/dev/null || return 0
   mkdir -p "$(dirname "$SAMPLE_LOG")" 2>/dev/null || return 0
 
@@ -143,18 +148,15 @@ record_filter_sample() {
     mv -f "$SAMPLE_LOG" "${SAMPLE_LOG}.1" 2>/dev/null || true
   fi
 
-  # Append JSONL line
   jq -nc \
     --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     --arg session "$SESSION_ID" \
     --arg project "${PROJECT_ROOT:-}" \
-    --arg decision "$decision" \
     --argjson msg_len "$LAST_MSG_LEN" \
     --arg tail "$TAIL_MSG" \
-    '{ts:$ts, session:$session, project:$project, decision:$decision, msg_len:$msg_len, tail:$tail}' \
+    '{ts:$ts, session:$session, project:$project, msg_len:$msg_len, tail:$tail}' \
     >> "$SAMPLE_LOG" 2>/dev/null || true
 
-  # Enforce 600 perms (newly-created file)
   chmod 600 "$SAMPLE_LOG" 2>/dev/null || true
 }
 
@@ -168,15 +170,16 @@ if [[ "$TAIL_MSG" =~ [\?？][[:space:]]*$ ]] \
    || [[ "$TAIL_MSG" =~ [Ww]ould[[:space:]]+you ]] \
    || [[ "$TAIL_MSG" =~ [Ww]hich[[:space:]] ]] \
    || [[ "$TAIL_MSG" =~ [Ss]hould[[:space:]]+[IWwYy] ]]; then
-  # Record for observability / heuristic iteration
+  # Trace only — 用户指令：不保存被正确筛选的 stop hook 输出
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) filter4-question-detected" \
     >> "$STATE_ROOT/hook-trace.log" 2>/dev/null || true
-  record_filter_sample "filter4-blocked"
   exit 0
 fi
 
-# --- All filters passed: fire inline sediment evaluation ---
-record_filter_sample "sediment-fired"
+# --- All filters passed: record sample + fire inline sediment evaluation ---
+# 记录 Filter 4 放行 turn 的 tail 作为离线分析素材（不做 decision 分类，
+# 人工看完整内容判断是不是 Filter 4 应该拦的问题 turn）
+record_sample
 cat <<'JSON'
 {
   "decision": "block",
