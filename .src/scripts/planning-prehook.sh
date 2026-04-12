@@ -84,6 +84,8 @@ import json, sys
 ctx = sys.stdin.read()
 payload = {
     'hookSpecificOutput': {
+        'hookEventName': 'PreToolUse',
+        'permissionDecision': 'allow',
         'additionalContext': ctx,
     },
 }
