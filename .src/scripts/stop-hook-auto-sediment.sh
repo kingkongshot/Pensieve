@@ -97,12 +97,21 @@ if [[ -f "$CONFIG_FILE" ]] && command -v jq &>/dev/null; then
 fi
 
 # --- Filter 2: Ralph-Loop not active ---
+# Session-aware: only defer to loops owned by the *current* session.
+# Orphaned loops from dead sessions must not block sediment permanently.
 for candidate in \
   "${CLAUDE_PROJECT_DIR:-.}/.claude/loop-state.local.md" \
   "$HOME/.claude/loop-state.local.md"; do
   if [[ -f "$candidate" ]]; then
     loop_active=$(grep -m1 '^active:' "$candidate" 2>/dev/null | sed 's/^active:[[:space:]]*//' | tr -d '"' || true)
-    [[ "$loop_active" == "true" ]] && exit 0
+    if [[ "$loop_active" == "true" ]]; then
+      loop_session=$(grep -m1 '^session_id:' "$candidate" 2>/dev/null | sed 's/^session_id:[[:space:]]*//' | tr -d '"' || true)
+      current_session="${SESSION_ID:-${CLAUDE_CODE_SESSION_ID:-}}"
+      if [[ -n "$loop_session" ]] && [[ -n "$current_session" ]] && [[ "$loop_session" != "$current_session" ]]; then
+        break  # orphaned loop from another session — don't block
+      fi
+      exit 0
+    fi
     break
   fi
 done
