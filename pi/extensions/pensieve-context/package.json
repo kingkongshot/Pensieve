@@ -1,0 +1,12 @@
+{
+  "name": "pensieve-context",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Inject Pensieve project memory navigation into pi system prompt; sync knowledge graph after .pensieve/ edits.",
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
