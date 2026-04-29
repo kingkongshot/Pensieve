@@ -127,9 +127,14 @@ fi
 echo "  - runtime state: $STATE_ROOT"
 
 # Register Pensieve hooks in settings.json (idempotent).
+# Skip when running under a non-Claude-Code harness (e.g. pi, cursor) — those
+# integrate via their own extension API and must not touch ~/.claude/settings.json.
+# Set PENSIEVE_HARNESS=pi (or any non-empty non-"claude-code" value) to opt out.
 REGISTER_HOOKS="$SKILL_ROOT/.src/scripts/register-hooks.sh"
-if [[ -f "$REGISTER_HOOKS" ]]; then
+if [[ -f "$REGISTER_HOOKS" ]] && [[ "${PENSIEVE_HARNESS:-claude-code}" == "claude-code" ]]; then
   bash "$REGISTER_HOOKS" || echo "⚠️  Hook registration skipped" >&2
+elif [[ "${PENSIEVE_HARNESS:-claude-code}" != "claude-code" ]]; then
+  echo "  - hook registration: skipped (PENSIEVE_HARNESS=$PENSIEVE_HARNESS)"
 fi
 
 if [[ -f "$PROJECT_STATE_SCRIPT" ]]; then
