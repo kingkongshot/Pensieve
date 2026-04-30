@@ -97,13 +97,18 @@ WAND_SOURCE="$SKILL_PATH/pi/skills/pensieve-wand"
 
 if [[ -d "$WAND_SOURCE" ]]; then
 	mkdir -p "$SKILL_DIR"
+	# Create relative symlink so the layout survives cloning to a different HOME
+	REL_SOURCE="$(realpath --relative-to="$SKILL_DIR" "$WAND_SOURCE" 2>/dev/null)"
+	if [[ -z "$REL_SOURCE" ]]; then
+		REL_SOURCE="$WAND_SOURCE"  # fallback to absolute on systems without realpath --relative-to
+	fi
 	if [[ -L "$WAND_TARGET" ]]; then
-		ln -sfn "$WAND_SOURCE" "$WAND_TARGET"
+		ln -sfn "$REL_SOURCE" "$WAND_TARGET"
 		echo "✅ pensieve-wand skill symlinked at $WAND_TARGET"
 	elif [[ -e "$WAND_TARGET" ]]; then
 		echo "ℹ️  $WAND_TARGET already exists as a non-symlink. Leaving alone."
 	else
-		ln -s "$WAND_SOURCE" "$WAND_TARGET"
+		ln -s "$REL_SOURCE" "$WAND_TARGET"
 		echo "✅ pensieve-wand skill symlinked at $WAND_TARGET"
 	fi
 fi
