@@ -152,9 +152,21 @@ export default function pensieveContext(pi: ExtensionAPI) {
 	let pensieveDir: string | null = null;
 
 	pi.on("session_start", (_event: SessionStartEvent, ctx) => {
+		// ── Inject Pensieve env vars into process.env so all subsequent
+		// bash tool calls inherit them. lib.sh can auto-detect these,
+		// but explicit injection is more reliable and avoids walking
+		// the filesystem on every invocation.
+		if (SKILL_ROOT) {
+			process.env.PENSIEVE_SKILL_ROOT = SKILL_ROOT;
+		}
+		process.env.PENSIEVE_PROJECT_ROOT = ctx.cwd;
+		process.env.PENSIEVE_HARNESS = "pi";
+
 		const dir = path.join(ctx.cwd, ".pensieve");
 		pensieveDir = fs.existsSync(dir) && fs.statSync(dir).isDirectory() ? dir : null;
 		if (pensieveDir) {
+			process.env.PENSIEVE_DATA_ROOT = pensieveDir;
+			process.env.PENSIEVE_STATE_ROOT = path.join(pensieveDir, ".state");
 			ctx.ui.setStatus("pensieve", "🧠 pensieve");
 		} else {
 			ctx.ui.setStatus("pensieve", undefined);
