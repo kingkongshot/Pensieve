@@ -7,23 +7,23 @@
 #   2. pensieve-context       — knowledge-graph navigation card injected
 #                                into the system prompt + auto-graph-sync
 #                                when files inside .pensieve/ are edited.
-#   3. (future) pensieve-auto-sediment — per-prompt auto-sediment trigger.
+#   3. pensieve-auto-sediment — per-prompt auto-sediment trigger.
+#   4. pensieve-wand          — pre-change context retrieval skill.
 #
-# By default this script does (1) + (2). Layer 3 is opt-in (--with-auto-sediment)
-# once the extension exists.
+# This script adds pensieve paths to ~/.pi/agent/settings.json instead of
+# creating symlinks (pi-native method, unified with pi-gstack approach).
 #
-# This script is *idempotent* and safe to re-run.
+# Idempotent and safe to re-run.
 
 set -euo pipefail
 
 # ─── Defaults ────────────────────────────────────────────────────────────────
 SKILL_PATH="${PENSIEVE_SKILL_PATH:-$HOME/.pi/agent/skills/pensieve}"
-SKILL_DIR="${PENSIEVE_SKILL_DIR:-$HOME/.pi/agent/skills}"
-EXT_DIR="${PENSIEVE_PI_EXT_DIR:-$HOME/.pi/agent/extensions}"
 BRANCH="${PENSIEVE_BRANCH:-feature/auto-sediment-hook}"
 REPO_URL="${PENSIEVE_REPO_URL:-https://github.com/kingkongshot/Pensieve.git}"
+SETTINGS_FILE="$HOME/.pi/agent/settings.json"
 INIT_PROJECT=1
-AUTO_SEDIMENT=0
+AUTO_SEDIMENT=1
 
 usage() {
 	cat <<USAGE
@@ -31,11 +31,9 @@ Usage: install.sh [options]
 
 Options:
   --no-init-project   Skip running init-project-data.sh on the current cwd.
-  --with-auto-sediment Also install Layer 3: per-prompt auto-sediment trigger.
+  --no-auto-sediment  Skip auto-sediment extension registration.
   --skill-path PATH   Where the pensieve skill should live
                       (default: \$HOME/.pi/agent/skills/pensieve)
-  --ext-dir PATH      Where pi looks up extensions
-                      (default: \$HOME/.pi/agent/extensions)
   --branch NAME       Branch to clone if installing from scratch
                       (default: feature/auto-sediment-hook)
   -h, --help          Show this help.
@@ -49,9 +47,8 @@ USAGE
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--no-init-project) INIT_PROJECT=0; shift ;;
-		--with-auto-sediment) AUTO_SEDIMENT=1; shift ;;
+		--no-auto-sediment) AUTO_SEDIMENT=0; shift ;;
 		--skill-path) SKILL_PATH="$2"; shift 2 ;;
-		--ext-dir) EXT_DIR="$2"; shift 2 ;;
 		--branch) BRANCH="$2"; shift 2 ;;
 		-h|--help) usage; exit 0 ;;
 		*) echo "Unknown argument: $1" >&2; usage; exit 1 ;;
@@ -67,64 +64,50 @@ else
 	git clone -b "$BRANCH" --single-branch "$REPO_URL" "$SKILL_PATH"
 fi
 
-# ─── 2. pensieve-context extension ───────────────────────────────────────────
-install_extension() {
-	local ext_name="$1"
-	local ext_target="$EXT_DIR/$ext_name"
-	local ext_source="$SKILL_PATH/pi/extensions/$ext_name"
-
-	if [[ ! -d "$ext_source" ]]; then
-		echo "❌ $ext_name extension not found at $ext_source" >&2
-		return 1
-	fi
-
-	mkdir -p "$EXT_DIR"
-	# Create relative symlink so the layout survives cloning to a different HOME
-	local rel_source
-	rel_source="$(realpath --relative-to="$EXT_DIR" "$ext_source" 2>/dev/null || echo "")"
-	[[ -z "$rel_source" ]] && rel_source="$ext_source"
-
-	if [[ -L "$ext_target" ]]; then
-		ln -sfn "$rel_source" "$ext_target"
-		echo "✅ $ext_name symlinked at $ext_target"
-	elif [[ -e "$ext_target" ]]; then
-		echo "ℹ️  $ext_target already exists as a non-symlink. Leaving it alone."
-		echo "   Remove it manually and re-run if you want pi to track the submodule."
-	else
-		ln -s "$rel_source" "$ext_target"
-		echo "✅ $ext_name symlinked at $ext_target"
-	fi
-}
-
-install_extension "pensieve-context"
-[[ $? -ne 0 ]] && exit 1
-
-# ─── 2.5 pensieve-wand skill ─────────────────────────────────────────────────
-WAND_TARGET="$SKILL_DIR/pensieve-wand"
-WAND_SOURCE="$SKILL_PATH/pi/skills/pensieve-wand"
-
-if [[ -d "$WAND_SOURCE" ]]; then
-	mkdir -p "$SKILL_DIR"
-	# Create relative symlink so the layout survives cloning to a different HOME
-	REL_SOURCE="$(realpath --relative-to="$SKILL_DIR" "$WAND_SOURCE" 2>/dev/null)"
-	if [[ -z "$REL_SOURCE" ]]; then
-		REL_SOURCE="$WAND_SOURCE"  # fallback to absolute on systems without realpath --relative-to
-	fi
-	if [[ -L "$WAND_TARGET" ]]; then
-		ln -sfn "$REL_SOURCE" "$WAND_TARGET"
-		echo "✅ pensieve-wand skill symlinked at $WAND_TARGET"
-	elif [[ -e "$WAND_TARGET" ]]; then
-		echo "ℹ️  $WAND_TARGET already exists as a non-symlink. Leaving alone."
-	else
-		ln -s "$REL_SOURCE" "$WAND_TARGET"
-		echo "✅ pensieve-wand skill symlinked at $WAND_TARGET"
-	fi
+# ─── 2. Update settings.json ─────────────────────────────────────────────────
+if [[ ! -f "$SETTINGS_FILE" ]]; then
+	echo "{}" > "$SETTINGS_FILE"
 fi
 
-# ─── 3 (optional). pensieve-auto-sediment extension ────────────────────────
-if [[ "$AUTO_SEDIMENT" == "1" ]]; then
-	install_extension "pensieve-auto-sediment" || true
+SKILLS_PATH="$SKILL_PATH/pi/skills"
+EXTS_PATH="$SKILL_PATH/pi/extensions"
+
+# Add skills path
+if command -v jq &>/dev/null; then
+	# Add pi/skills if not present
+	HAS_SKILLS=$(jq --arg p "$SKILLS_PATH" '.skills // [] | index($p)' "$SETTINGS_FILE")
+	if [[ "$HAS_SKILLS" == "null" ]]; then
+		jq --arg p "$SKILLS_PATH" '.skills = ([$p] + (.skills // []))' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp"
+		mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+		echo "✅ Added $SKILLS_PATH to settings.json skills"
+	else
+		echo "ℹ️  $SKILLS_PATH already in settings.json skills"
+	fi
+
+	# Add pi/extensions if not present
+	HAS_EXTS=$(jq --arg p "$EXTS_PATH" '.extensions // [] | index($p)' "$SETTINGS_FILE")
+	if [[ "$HAS_EXTS" == "null" ]]; then
+		jq --arg p "$EXTS_PATH" '.extensions = ([$p] + (.extensions // []))' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp"
+		mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
+		echo "✅ Added $EXTS_PATH to settings.json extensions"
+	else
+		echo "ℹ️  $EXTS_PATH already in settings.json extensions"
+	fi
+else
+	echo "⚠️  jq not available — add these paths manually to $SETTINGS_FILE:"
+	echo "   \"skills\": [\"$SKILLS_PATH\"]"
+	echo "   \"extensions\": [\"$EXTS_PATH\"]"
 fi
+
+# ─── 3. Clean up old symlinks (migration from pre-package.json era) ───────────
+for old_link in "$HOME/.pi/agent/extensions/pensieve-context" \
+                "$HOME/.pi/agent/extensions/pensieve-auto-sediment" \
+                "$HOME/.pi/agent/skills/pensieve-wand"; do
+	if [[ -L "$old_link" ]]; then
+		rm "$old_link"
+		echo "🧹 Removed legacy symlink: $old_link"
+	fi
+done
 
 # ─── 4. Project init ─────────────────────────────────────────────────────────
 if [[ "$INIT_PROJECT" == "1" ]]; then
@@ -141,11 +124,9 @@ cat <<DONE
 Done.
 
 Next steps:
-  • Restart pi (or run \`/reload\` in an interactive session) so the extension
-    is picked up.
-  • In a fresh pi session inside this project, ask:
-      "What do you know about Pensieve memory in this project?"
-    The system prompt now carries the navigation card.
+  • Restart pi (or run \`/reload\` in an interactive session).
+  • Pensieve extensions and skills are now managed via settings.json paths
+    (same method as pi-gstack). No symlinks needed.
   • To add Pensieve to another project later:
       cd <other-project>
       PENSIEVE_HARNESS=pi bash "$SKILL_PATH/.src/scripts/init-project-data.sh"
