@@ -9,10 +9,16 @@ without forking the core. It is opt-in: Claude Code users see no change.
 pi/
 ├── README.md                          ← this file
 ├── install.sh                         ← idempotent installer
-└── extensions/
-    └── pensieve-context/              ← Layer 2: knowledge graph injection
-        ├── package.json
-        └── index.ts
+├── extensions/
+│   ├── pensieve-context/              ← Layer 2: knowledge graph injection
+│   │   ├── package.json
+│   │   └── index.ts
+│   └── pensieve-auto-sediment/        ← Layer 3: per-prompt auto-sediment
+│       ├── package.json
+│       └── index.ts
+└── skills/
+    └── pensieve-wand/                 ← knowledge retrieval specialist
+        └── SKILL.md
 ```
 
 ## What this gives you
@@ -21,7 +27,8 @@ pi/
 |---|---|---|
 | **1. Skill (free)** | Six tools (init / upgrade / migrate / doctor / self-improve / refine), four-layer memory model, project data dir | The unmodified `SKILL.md` + `.src/` already work via pi's [Agent Skills](https://agentskills.io) support. Just place the repo at `~/.pi/agent/skills/pensieve/`. |
 | **2. Knowledge graph injection** | Tell the LLM there is a project memory and when to read it; keep the graph fresh after edits | `pi/extensions/pensieve-context/index.ts` — appends a small navigation card to the system prompt and bridges pi's `tool_result` event to Pensieve's `sync-project-skill-graph.sh`. |
-| **3. Auto-sediment** *(planned)* | Per-prompt evaluation of "should this turn be sedimented?" | TBD — `pi/extensions/pensieve-auto-sediment/`. Reuses the upstream `stop-hook-auto-sediment.sh` filters; bridges from pi's `agent_end` event. |
+| **3. Auto-sediment** | Per-prompt evaluation of "should this exchange be sedimented?" | `pi/extensions/pensieve-auto-sediment/index.ts` — ~120 line extension. Listens to pi's `agent_end`, extracts the last assistant message, feeds it through the same `stop-hook-auto-sediment.sh` filter chain Claude Code uses. |
+| **pensieve-wand skill** | Structured knowledge retrieval with System 1/System 2 decision model and cognitive budget | `pi/skills/pensieve-wand/SKILL.md` — pi-native adaptation of the Claude Code subagent. Invoke via `/skill:pensieve-wand`. |
 
 ## Install
 
@@ -38,11 +45,18 @@ bash agent/skills/pensieve/pi/install.sh
 
 The installer:
 1. Verifies the skill is present.
-2. Symlinks `pi/extensions/pensieve-context/` into `~/.pi/agent/extensions/`.
-3. If `cwd` is a real project (not the dotfiles repo itself), runs
+2. Symlinks `pensieve-context` extension into `~/.pi/agent/extensions/`.
+3. Symlinks `pensieve-wand` skill into `~/.pi/agent/skills/`.
+4. If `cwd` is a real project (not the dotfiles repo itself), runs
    `init-project-data.sh` with `PENSIEVE_HARNESS=pi` — that env var skips the
    Claude-Code-only `register-hooks.sh` step that would otherwise touch
    `~/.claude/settings.json`.
+
+For Layer 3 (auto-sediment), add `--with-auto-sediment`:
+
+```bash
+bash agent/skills/pensieve/pi/install.sh --with-auto-sediment
+```
 
 If you already have a Pensieve checkout somewhere else (e.g. `~/.claude/skills/pensieve`),
 point the installer at it:
@@ -82,6 +96,11 @@ graph staleness is recoverable, so we don't bother surfacing failures.
   Pensieve code is a 6-line `PENSIEVE_HARNESS` guard in
   `init-project-data.sh` so non-Claude-Code harnesses don't touch
   `~/.claude/settings.json`.
+- **Environment variable injection**. On `session_start`, the extension sets
+  `PENSIEVE_SKILL_ROOT`, `PENSIEVE_PROJECT_ROOT`, `PENSIEVE_HARNESS=pi`,
+  and (when `.pensieve/` exists) `PENSIEVE_DATA_ROOT` + `PENSIEVE_STATE_ROOT`
+  on `process.env`. All subsequent `bash` tool calls inherit these, so
+  Pensieve scripts work without manual env-var boilerplate.
 - **Ranked goals (per user direction)**: P1 = knowledge graph context
   injection ✅ (this layer), P2 = auto-sediment (Layer 3, future). Pure core
   Pensieve usage requires neither.

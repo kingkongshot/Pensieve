@@ -18,10 +18,12 @@ set -euo pipefail
 
 # ─── Defaults ────────────────────────────────────────────────────────────────
 SKILL_PATH="${PENSIEVE_SKILL_PATH:-$HOME/.pi/agent/skills/pensieve}"
+SKILL_DIR="${PENSIEVE_SKILL_DIR:-$HOME/.pi/agent/skills}"
 EXT_DIR="${PENSIEVE_PI_EXT_DIR:-$HOME/.pi/agent/extensions}"
 BRANCH="${PENSIEVE_BRANCH:-feature/auto-sediment-hook}"
 REPO_URL="${PENSIEVE_REPO_URL:-https://github.com/kingkongshot/Pensieve.git}"
 INIT_PROJECT=1
+AUTO_SEDIMENT=0
 
 usage() {
 	cat <<USAGE
@@ -29,6 +31,7 @@ Usage: install.sh [options]
 
 Options:
   --no-init-project   Skip running init-project-data.sh on the current cwd.
+  --with-auto-sediment Also install Layer 3: per-prompt auto-sediment trigger.
   --skill-path PATH   Where the pensieve skill should live
                       (default: \$HOME/.pi/agent/skills/pensieve)
   --ext-dir PATH      Where pi looks up extensions
@@ -46,6 +49,7 @@ USAGE
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--no-init-project) INIT_PROJECT=0; shift ;;
+		--with-auto-sediment) AUTO_SEDIMENT=1; shift ;;
 		--skill-path) SKILL_PATH="$2"; shift 2 ;;
 		--ext-dir) EXT_DIR="$2"; shift 2 ;;
 		--branch) BRANCH="$2"; shift 2 ;;
@@ -87,7 +91,44 @@ else
 	echo "✅ pensieve-context symlinked at $EXT_TARGET"
 fi
 
-# ─── 3. Project init ─────────────────────────────────────────────────────────
+# ─── 2.5 pensieve-wand skill ─────────────────────────────────────────────────
+WAND_TARGET="$SKILL_DIR/pensieve-wand"
+WAND_SOURCE="$SKILL_PATH/pi/skills/pensieve-wand"
+
+if [[ -d "$WAND_SOURCE" ]]; then
+	mkdir -p "$SKILL_DIR"
+	if [[ -L "$WAND_TARGET" ]]; then
+		ln -sfn "$WAND_SOURCE" "$WAND_TARGET"
+		echo "✅ pensieve-wand skill symlinked at $WAND_TARGET"
+	elif [[ -e "$WAND_TARGET" ]]; then
+		echo "ℹ️  $WAND_TARGET already exists as a non-symlink. Leaving alone."
+	else
+		ln -s "$WAND_SOURCE" "$WAND_TARGET"
+		echo "✅ pensieve-wand skill symlinked at $WAND_TARGET"
+	fi
+fi
+
+# ─── 3 (optional). pensieve-auto-sediment extension ────────────────────────
+if [[ "$AUTO_SEDIMENT" == "1" ]]; then
+	SEDIMENT_TARGET="$EXT_DIR/pensieve-auto-sediment"
+	SEDIMENT_SOURCE="$SKILL_PATH/pi/extensions/pensieve-auto-sediment"
+
+	if [[ ! -d "$SEDIMENT_SOURCE" ]]; then
+		echo "❌ pensieve-auto-sediment extension not found at $SEDIMENT_SOURCE" >&2
+	else
+		mkdir -p "$EXT_DIR"
+		if [[ -L "$SEDIMENT_TARGET" ]]; then
+			ln -sfn "$SEDIMENT_SOURCE" "$SEDIMENT_TARGET"
+		elif [[ -e "$SEDIMENT_TARGET" ]]; then
+			echo "ℹ️  $SEDIMENT_TARGET already exists as non-symlink. Leaving alone."
+		else
+			ln -s "$SEDIMENT_SOURCE" "$SEDIMENT_TARGET"
+		fi
+		echo "✅ pensieve-auto-sediment symlinked at $SEDIMENT_TARGET"
+	fi
+fi
+
+# ─── 4. Project init ─────────────────────────────────────────────────────────
 if [[ "$INIT_PROJECT" == "1" ]]; then
 	if [[ -d ".pensieve" ]]; then
 		echo "✅ Current project already initialized: $(pwd)/.pensieve"

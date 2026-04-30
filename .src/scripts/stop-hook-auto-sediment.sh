@@ -73,7 +73,7 @@ fi
 # Hook-triggered continuation has stop_hook_active=true. Skip to prevent infinite loop.
 [[ "$STOP_HOOK_ACTIVE" == "true" ]] && exit 0
 
-SAMPLE_LOG="$HOME/.claude/.pensieve-filter-samples.jsonl"
+SAMPLE_LOG="${PENSIEVE_SAMPLE_LOG:-$HOME/.claude/.pensieve-filter-samples.jsonl}"
 
 # --- Filter 1: Pensieve project ---
 PROJECT_ROOT="$(project_root 2>/dev/null)" || exit 0

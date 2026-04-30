@@ -1,0 +1,12 @@
+{
+  "name": "pensieve-auto-sediment",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Per-prompt auto-sediment trigger for Pensieve on pi. Minimal extension — reuses upstream stop-hook-auto-sediment.sh.",
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
