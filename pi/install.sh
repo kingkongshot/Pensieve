@@ -68,28 +68,36 @@ else
 fi
 
 # ─── 2. pensieve-context extension ───────────────────────────────────────────
-EXT_TARGET="$EXT_DIR/pensieve-context"
-EXT_SOURCE="$SKILL_PATH/pi/extensions/pensieve-context"
+install_extension() {
+	local ext_name="$1"
+	local ext_target="$EXT_DIR/$ext_name"
+	local ext_source="$SKILL_PATH/pi/extensions/$ext_name"
 
-if [[ ! -d "$EXT_SOURCE" ]]; then
-	echo "❌ pensieve-context extension not found at $EXT_SOURCE" >&2
-	echo "   Make sure your Pensieve checkout is on a branch that includes pi/extensions/." >&2
-	exit 1
-fi
+	if [[ ! -d "$ext_source" ]]; then
+		echo "❌ $ext_name extension not found at $ext_source" >&2
+		return 1
+	fi
 
-mkdir -p "$EXT_DIR"
-if [[ -L "$EXT_TARGET" ]]; then
-	# Already a symlink — point it at the source unconditionally so updates
-	# to the submodule take effect immediately.
-	ln -sfn "$EXT_SOURCE" "$EXT_TARGET"
-	echo "✅ pensieve-context symlinked at $EXT_TARGET"
-elif [[ -e "$EXT_TARGET" ]]; then
-	echo "ℹ️  $EXT_TARGET already exists as a non-symlink. Leaving it alone."
-	echo "   Remove it manually and re-run if you want pi to track the submodule."
-else
-	ln -s "$EXT_SOURCE" "$EXT_TARGET"
-	echo "✅ pensieve-context symlinked at $EXT_TARGET"
-fi
+	mkdir -p "$EXT_DIR"
+	# Create relative symlink so the layout survives cloning to a different HOME
+	local rel_source
+	rel_source="$(realpath --relative-to="$EXT_DIR" "$ext_source" 2>/dev/null || echo "")"
+	[[ -z "$rel_source" ]] && rel_source="$ext_source"
+
+	if [[ -L "$ext_target" ]]; then
+		ln -sfn "$rel_source" "$ext_target"
+		echo "✅ $ext_name symlinked at $ext_target"
+	elif [[ -e "$ext_target" ]]; then
+		echo "ℹ️  $ext_target already exists as a non-symlink. Leaving it alone."
+		echo "   Remove it manually and re-run if you want pi to track the submodule."
+	else
+		ln -s "$rel_source" "$ext_target"
+		echo "✅ $ext_name symlinked at $ext_target"
+	fi
+}
+
+install_extension "pensieve-context"
+[[ $? -ne 0 ]] && exit 1
 
 # ─── 2.5 pensieve-wand skill ─────────────────────────────────────────────────
 WAND_TARGET="$SKILL_DIR/pensieve-wand"
@@ -115,22 +123,7 @@ fi
 
 # ─── 3 (optional). pensieve-auto-sediment extension ────────────────────────
 if [[ "$AUTO_SEDIMENT" == "1" ]]; then
-	SEDIMENT_TARGET="$EXT_DIR/pensieve-auto-sediment"
-	SEDIMENT_SOURCE="$SKILL_PATH/pi/extensions/pensieve-auto-sediment"
-
-	if [[ ! -d "$SEDIMENT_SOURCE" ]]; then
-		echo "❌ pensieve-auto-sediment extension not found at $SEDIMENT_SOURCE" >&2
-	else
-		mkdir -p "$EXT_DIR"
-		if [[ -L "$SEDIMENT_TARGET" ]]; then
-			ln -sfn "$SEDIMENT_SOURCE" "$SEDIMENT_TARGET"
-		elif [[ -e "$SEDIMENT_TARGET" ]]; then
-			echo "ℹ️  $SEDIMENT_TARGET already exists as non-symlink. Leaving alone."
-		else
-			ln -s "$SEDIMENT_SOURCE" "$SEDIMENT_TARGET"
-		fi
-		echo "✅ pensieve-auto-sediment symlinked at $SEDIMENT_TARGET"
-	fi
+	install_extension "pensieve-auto-sediment" || true
 fi
 
 # ─── 4. Project init ─────────────────────────────────────────────────────────
