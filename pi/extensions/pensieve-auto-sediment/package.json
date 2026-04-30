@@ -2,7 +2,7 @@
   "name": "pensieve-auto-sediment",
   "version": "0.1.0",
   "private": true,
-  "description": "Per-prompt auto-sediment trigger for Pensieve on pi. Minimal extension — reuses upstream stop-hook-auto-sediment.sh.",
+  "description": "Per-prompt auto-sediment for Pensieve on pi. In-process sidecar mode: detached LLM evaluation + writer with configurable models. Reuses upstream stop-hook-auto-sediment.sh filter chain.",
   "type": "module",
   "pi": {
     "extensions": [
