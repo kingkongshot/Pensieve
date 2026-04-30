@@ -227,6 +227,12 @@ export default function pensieveAutoSediment(pi: ExtensionAPI) {
 		const { sid, projectRoot, localPensieveDir } = inputs;
 		runState.set(sid, { status: "running" });
 
+		// Show persistent status in footer so the user knows a background task
+		// is running and won't quit pi before sediment completes.
+		if (inputs.hasUI) {
+			try { inputs.ui.setStatus("pensieve-sediment", "Pensieve 沉淀中..."); } catch {}
+		}
+
 		void (async () => {
 			try {
 				const result = await runSidecar({
@@ -263,6 +269,7 @@ export default function pensieveAutoSediment(pi: ExtensionAPI) {
 					// Pending re-entry: kick off another full pass with the latest
 					// queued message (re-runs filter chain too — cheap, and keeps
 					// the question_heuristic / substantial gates honest).
+					// Status stays "沉淀中..." — another run starts immediately.
 					const pendingMsg = state.pendingMsg;
 					runState.delete(sid);
 					try {
@@ -274,6 +281,10 @@ export default function pensieveAutoSediment(pi: ExtensionAPI) {
 					dispatchAfterFilter({ ...inputs, lastMsg: pendingMsg });
 				} else {
 					runState.delete(sid);
+					// Clear footer status — sidecar chain is done.
+					if (inputs.hasUI) {
+						try { inputs.ui.setStatus("pensieve-sediment", undefined); } catch {}
+					}
 				}
 			}
 		})();
