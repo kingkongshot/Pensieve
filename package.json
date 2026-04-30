@@ -1,0 +1,11 @@
+{
+  "name": "pensieve",
+  "version": "1.0.0",
+  "description": "Project memory and knowledge base for AI coding agents. Captures decisions, maxims, and knowledge with auto-sediment.",
+  "keywords": ["pi-package", "memory", "knowledge-base"],
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./pi/extensions"],
+    "skills": ["./pi/skills"]
+  }
+}
