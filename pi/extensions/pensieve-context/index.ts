@@ -90,9 +90,15 @@ ${hasState ? `- **state**: \`.pensieve/state.md\` (lifecycle + recent changes)` 
 
 ### When to consult Pensieve
 
-- **Before planning / designing** → read graph, locate relevant nodes, follow links to active \`decisions/\` and \`maxims/\`. Don't re-litigate decided questions.
+- **Before planning / designing** → read graph, locate relevant nodes, follow links to active \`decisions/\` and \`maxims/\`. Don't re-litigate decided questions. Also \`gbrain_search\` for cross-project engineering principles.
 - **Before exploring code** → grep \`.pensieve/knowledge/\` for cached file maps, module boundaries, call chains. Reuse beats re-discovering.
 - **Before suggesting a refactor** → check \`maxims/\` for hard rules ("must / must not") that constrain the design space.
+
+### Pensieve vs gbrain
+
+- **Pensieve** = this project's code knowledge (file paths, call chains, architecture decisions)
+- **gbrain** = cross-project world knowledge (engineering principles, known pitfalls, patterns)
+- Use \`gbrain_search\` when you need principles that apply beyond this codebase; use Pensieve grep/read when you need project-specific paths or decisions.
 
 ### When to write to Pensieve
 
