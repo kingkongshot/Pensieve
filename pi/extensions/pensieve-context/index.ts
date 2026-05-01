@@ -167,7 +167,7 @@ export default function pensieveContext(pi: ExtensionAPI) {
 		if (pensieveDir) {
 			process.env.PENSIEVE_DATA_ROOT = pensieveDir;
 			process.env.PENSIEVE_STATE_ROOT = path.join(pensieveDir, ".state");
-			ctx.ui.setStatus("pensieve", "pensieve");
+			ctx.ui.setStatus("pensieve", "📖 pensieve");
 		} else {
 			ctx.ui.setStatus("pensieve", undefined);
 		}
