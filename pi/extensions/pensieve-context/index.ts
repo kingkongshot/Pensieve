@@ -97,7 +97,7 @@ ${hasState ? `- **state**: \`.pensieve/state.md\` (lifecycle + recent changes)` 
 ### Pensieve vs gbrain
 
 - **Pensieve** = this project's code knowledge (file paths, call chains, architecture decisions)
-- **gbrain** = cross-project world knowledge (engineering principles, known pitfalls, patterns)
+- **gbrain** = cross-project world knowledge (engineering principles, known pitfalls, patterns). Content is English-only — always query in English.
 - Use \`gbrain_search\` when you need principles that apply beyond this codebase; use Pensieve grep/read when you need project-specific paths or decisions.
 
 ### When to write to Pensieve
