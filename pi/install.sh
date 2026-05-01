@@ -7,8 +7,7 @@
 #   2. pensieve-context       — knowledge-graph navigation card injected
 #                                into the system prompt + auto-graph-sync
 #                                when files inside .pensieve/ are edited.
-#   3. pensieve-auto-sediment — per-prompt auto-sediment trigger.
-#   4. pensieve-wand          — pre-change context retrieval skill.
+#   3. pensieve-wand          — pre-change context retrieval skill.
 #
 # This script adds pensieve paths to ~/.pi/agent/settings.json instead of
 # creating symlinks (pi-native method, unified with pi-gstack approach).
@@ -19,11 +18,10 @@ set -euo pipefail
 
 # ─── Defaults ────────────────────────────────────────────────────────────────
 SKILL_PATH="${PENSIEVE_SKILL_PATH:-$HOME/.pi/agent/skills/pensieve}"
-BRANCH="${PENSIEVE_BRANCH:-feature/auto-sediment-hook}"
+BRANCH="${PENSIEVE_BRANCH:-pi}"
 REPO_URL="${PENSIEVE_REPO_URL:-https://github.com/kingkongshot/Pensieve.git}"
 SETTINGS_FILE="$HOME/.pi/agent/settings.json"
 INIT_PROJECT=1
-AUTO_SEDIMENT=1
 
 usage() {
 	cat <<USAGE
@@ -31,11 +29,10 @@ Usage: install.sh [options]
 
 Options:
   --no-init-project   Skip running init-project-data.sh on the current cwd.
-  --no-auto-sediment  Skip auto-sediment extension registration.
   --skill-path PATH   Where the pensieve skill should live
                       (default: \$HOME/.pi/agent/skills/pensieve)
   --branch NAME       Branch to clone if installing from scratch
-                      (default: feature/auto-sediment-hook)
+                      (default: pi)
   -h, --help          Show this help.
 
 The script prefers a Pensieve checkout that already exists at SKILL_PATH (e.g.
@@ -47,7 +44,6 @@ USAGE
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--no-init-project) INIT_PROJECT=0; shift ;;
-		--no-auto-sediment) AUTO_SEDIMENT=0; shift ;;
 		--skill-path) SKILL_PATH="$2"; shift 2 ;;
 		--branch) BRANCH="$2"; shift 2 ;;
 		-h|--help) usage; exit 0 ;;
@@ -101,7 +97,6 @@ fi
 
 # ─── 3. Clean up old symlinks (migration from pre-package.json era) ───────────
 for old_link in "$HOME/.pi/agent/extensions/pensieve-context" \
-                "$HOME/.pi/agent/extensions/pensieve-auto-sediment" \
                 "$HOME/.pi/agent/skills/pensieve-wand"; do
 	if [[ -L "$old_link" ]]; then
 		rm "$old_link"
