@@ -132,7 +132,7 @@ pi 原生支持 [Agent Skills 标准](https://agentskills.io/specification)，SK
 
 ```bash
 # 1. 在 ~/.pi 里加 submodule
-git -C ~/.pi submodule add -b feature/auto-sediment-hook \
+git -C ~/.pi submodule add -b pi \
     https://github.com/kingkongshot/Pensieve.git agent/skills/pensieve
 
 # 2. 跳过 register-hooks.sh（那只对 Claude Code 有意义），
@@ -143,7 +143,7 @@ bash ~/.pi/agent/skills/pensieve/pi/install.sh
 如果你不想用 submodule，`install.sh` 也能独立 clone：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/kingkongshot/Pensieve/feature/auto-sediment-hook/pi/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/kingkongshot/Pensieve/pi/pi/install.sh)
 ```
 
 详情见 [`pi/README.md`](pi/README.md)。

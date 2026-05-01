@@ -62,6 +62,7 @@ fi
 
 # ─── 2. Update settings.json ─────────────────────────────────────────────────
 if [[ ! -f "$SETTINGS_FILE" ]]; then
+	mkdir -p "$(dirname "$SETTINGS_FILE")"
 	echo "{}" > "$SETTINGS_FILE"
 fi
 
