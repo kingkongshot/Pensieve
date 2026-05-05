@@ -68,7 +68,7 @@ fi
 
 REL_PATH="${FILE_PATH#$USER_DATA_ROOT/}"
 case "$REL_PATH" in
-    maxims/*|decisions/*|knowledge/*|pipelines/*)
+    maxims/*|decisions/*|knowledge/*|pipelines/*|short-term/*)
         ;;
     *)
         exit 0

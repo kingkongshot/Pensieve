@@ -121,6 +121,36 @@ bash ~/.claude/skills/pensieve/.src/scripts/init-project-data.sh
 </details>
 
 <details>
+<summary><b>pi (mariozechner/pi-coding-agent)</b></summary>
+
+pi 原生支持 [Agent Skills 标准](https://agentskills.io/specification)，SKILL.md 路由开箱即用。本分支额外提供了一个轻量 extension（`pi/extensions/pensieve-context/`，~150 行 TS）来完成：
+
+- 在 pi 的 `before_agent_start` 事件中注入**知识图谱导航卡**（仅 ~300 token，不是全量图谱）
+- 在 `tool_result` 事件中检测 `.pensieve/` 下的文件编辑，自动重跑 `sync-project-skill-graph.sh` 保持图谱新鲜
+
+推荐作为 `~/.pi` 里的 git submodule 管理：
+
+```bash
+# 1. 在 ~/.pi 里加 submodule
+git -C ~/.pi submodule add -b pi \
+    https://github.com/kingkongshot/Pensieve.git agent/skills/pensieve
+
+# 2. 跳过 register-hooks.sh（那只对 Claude Code 有意义），
+#    安装 pi-context extension + 初始化项目数据
+bash ~/.pi/agent/skills/pensieve/pi/install.sh
+```
+
+如果你不想用 submodule，`install.sh` 也能独立 clone：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/kingkongshot/Pensieve/pi/pi/install.sh)
+```
+
+详情见 [`pi/README.md`](pi/README.md)。
+
+</details>
+
+<details>
 <summary><b>其他客户端（Cursor / 通用 Agent 等）</b></summary>
 
 将 `<skill-path>` 替换为客户端对应的 skill 目录（如 `~/.cursor/skills/pensieve`）。
