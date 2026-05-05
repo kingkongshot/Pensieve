@@ -100,15 +100,29 @@ ${hasState ? `- **state**: \`.pensieve/state.md\` (lifecycle + recent changes)` 
 - **gbrain** = cross-project world knowledge (engineering principles, known pitfalls, patterns). Content is English-only — always query in English.
 - Use \`gbrain_search\` when you need principles that apply beyond this codebase; use Pensieve grep/read when you need project-specific paths or decisions.
 
-### When to write to Pensieve
+### Pensieve writes are handled by the sediment sidecar — do NOT write yourself
 
-After producing a durable insight (root cause found, design tradeoff settled,
-non-obvious pitfall hit), invoke \`/skill:pensieve self-improve\` to crystallize
-it into the right layer. Pure transient back-and-forth doesn't need to be saved.
+The pi-sediment background agent watches every \`agent_end\` event and decides
+what to crystallize into Pensieve, with the full conversation context, ensemble
+dedupe, and slug-collision handling. **The main session must NOT \`write\` /
+\`edit\` files under \`.pensieve/\`** — doing so creates a race with sediment
+(both writers landing the same insight under different slugs) and bypasses
+dedupe.
+
+Exception: when the user **explicitly** asks to save / pensieve / sediment /
+\`/skill:pensieve self-improve\` / make-a-maxim, then the main session may run
+the self-improve workflow. Without an explicit user request, defer to sediment
+even if the conversation produced obvious durable insight — sediment will
+catch it post-turn.
+
+Gbrain has the same contract: do NOT \`bash gbrain put\` / \`bun ~/gbrain/src/cli.ts
+put\` from the main session. Sediment's gbrain-agent owns gbrain writes; main
+session is read-only on both stores.
 
 The full skill spec, tool boundaries, and reference docs live at
 \`${SKILL_ROOT ? path.relative(pensieveDir, SKILL_ROOT) || SKILL_ROOT : "<pensieve-skill-root>"}/SKILL.md\`
-and \`<skill-root>/.src/references/\`. Use \`/skill:pensieve\` to load the router.
+and \`<skill-root>/.src/references/\`. Use \`/skill:pensieve\` to load the router
+(only when the user explicitly requests it).
 `;
 }
 
